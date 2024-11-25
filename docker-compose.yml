@@ -1,0 +1,17 @@
+#version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    volumes:
+      - .:/app                           # Volumen para sincronizar el código
+      - ./trivia.db:/app/trivia.db        # Volumen para persistir la base de datos (en la raíz del contenedor)
+    command: flask run --host=0.0.0.0    # Ejecuta la aplicación
+    restart: always                     # Asegura que el contenedor se reinicie automáticamente
+
+volumes:
+  db_data:                               # Volumen para persistencia de la base de datos

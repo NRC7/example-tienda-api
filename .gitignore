@@ -1,0 +1,39 @@
+# Entornos virtuales
+venv/
+env/
+*.env
+
+# Archivos de compilación de Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Archivos de configuración de IDE
+.vscode/
+.idea/
+
+# Archivos de bases de datos locales
+*.sqlite3
+*.db
+
+# Archivos de logs
+*.log
+
+# Archivos de prueba
+.coverage
+nosetests.xml
+coverage.xml
+
+# Archivos temporales del sistema
+Thumbs.db
+Desktop.ini
+
+# Archivos temporales de Docker (si aplica)
+.docker/
+
+# Otros
+*.bak
+
+# Ignorar bases de datos
+test.db
+trivia.db
