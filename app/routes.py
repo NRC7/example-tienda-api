@@ -16,6 +16,7 @@ from app import mongo
 from flask_cors import cross_origin
 from pymongo.errors import PyMongoError
 from http.client import HTTPException
+import json
 
 
 main = Blueprint('main', __name__)
@@ -146,109 +147,53 @@ def delete_product_route(product_id):
 @main.route('/register', methods=['POST'])
 def register():
     try:
-        # Intentar crear un nuevo usuario
         data = request.get_json()
         name = data.get('name')
         email = data.get('email')
         password = data.get('password')
-        role = data.get('role', 'jugador')  # Por defecto, todos son jugadores
+        role = data.get('role', 'jugador')
 
-        # Verificar que todos los campos estén presentes
-        if not name or not email or not password:
-            return jsonify({
-                "code": "400",
-                "message": "Faltan datos obligatorios: nombre, correo o contraseña"
-            }), 400
-        
-        # Validar formato del correo electrónico
-        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-            return jsonify({
-                "code": "400",
-                "message": "El correo electrónico no es válido"
-            }), 400
+        if not all([name, email, password]):
+            raise HTTPException(description="Missing required fields", code=400)
 
-        # Validar que el rol sea válido
-        if role not in ['admin', 'jugador']:
-            return jsonify({
-                "code": "400",
-                "message": "El rol debe ser 'admin' o 'jugador'"
-            }), 400
-        
-        # Verificar si el correo electrónico ya está registrado
-        existing_user = User.query.filter_by(email=email).first()
-        if existing_user:
-            return jsonify({
-                "code": "400",
-                "message": "El correo electrónico ya está registrado"
-            }), 400
-
-        # Registrar usuario en la base de datos
-        user = register_user(name, email, generate_password_hash(password), role)
-
-        return jsonify({"code": "201", "message": "Usuario registrado", "user": {"id": user.id, "name": user.name, "role": user.role}}), 201
-
+        hashed_password = generate_password_hash(password)
+        user = register_user(name, email, hashed_password, role)
+        return jsonify({"code": "201", "message": "User registered", "user_id": user.id}), 201
     except IntegrityError as e:
-        # Si hay un error de integridad (como clave duplicada)
-        return jsonify({
-            "code": "400",
-            "message": "El usuario ya existe"
-        }), 400
-
-    except Exception as e:
-        # Manejo de otros errores internos
-        return jsonify({
-            "code": "500",
-            "message": f"Faltan datos necesarios {e}"
-        }), 500
+        return handle_integrity_error(e)
     
 
 # Endpoint para login
 @main.route('/login', methods=['POST'])
 def login():
-    data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
 
-    # Validar que el correo y la contraseña estén presentes
-    if not email or not password:
-        return jsonify({"code": "400", "message": "Correo y contraseña son requeridos"}), 400
+        if not all([email, password]):
+            raise HTTPException(description="Missing email or password", code=400)
 
-    # Validar formato del correo electrónico
-    if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-        return jsonify({"code": "400", "message": "El correo electrónico no es válido"}), 400
+        user = get_user_by_email(email)
+        if not user or not check_password_hash(user.password, password):
+            raise HTTPException(description="Invalid credentials", code=401)
 
-    # Buscar al usuario por email
-    user = get_user_by_email(email)
+        token = create_access_token(identity=str(user.id))
+        return jsonify({"code": "200", "message": "Login successful", "token": token}), 200
+    except Exception as e:
+        return handle_generic_error(e)
     
-    # Si no se encuentra el usuario o la contraseña es incorrecta
-    if not user or not check_password_hash(user.password, password):
-        return jsonify({"code": "401", "message": "Credenciales inválidas"}), 401
-
-    # Crear el token de acceso con identidad como el ID del usuario (convertido a string)
-    access_token = create_access_token(
-        identity=str(user.id),  # Asegurarse de que identity sea una cadena
-        expires_delta=timedelta(minutes=30)  # El token expirará en 1 minuto
-    )
-
-    return jsonify({
-        "code": "200",
-        "message": "Login exitoso",
-        "token": access_token
-    }), 200
-
 
 # Endpoint para obtener lista de usuarios
 @main.route('/users', methods=['GET'])
 @jwt_required_middleware(role="admin")
 def get_users_route():
-    users = get_users()
-    return jsonify({
-        "code": "200",
-        "message": "Usuarios recuperados exitosamente",
-        "data": [
-            {"id": user.id, "name": user.name, "email": user.email, "rol": user.role} for user in users
-        ]
-    }), 200
+    try:
+        users = [user for batch in get_users(batch_size=100) for user in batch]
+        data = [{"id": user.id, "name": user.name, "email": user.email, "role": user.role} for user in users]
+        return jsonify({"code": "200", "message": "Users retrieved successfully.", "data": data}), 200
+    except Exception as e:
+        return handle_generic_error(e)
 
 
 # Endpoint para actualizar un usuario
