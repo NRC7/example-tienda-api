@@ -19,7 +19,8 @@ def create_app():
     CORS(app, resources={r"/*": {"origins": "http://localhost:5000"}})
 
     # Configuración de la base de datos
-    app.config["MONGO_URI"] = "mongodb+srv://admin_db:topolino@db-cluster-bp.thr7b8f.mongodb.net/db-tienda-products?retryWrites=true&w=majority"
+    # Si se borra la DB al reemplazar el nombre en el string usar "_" no "-" porque mongo los trata como char de rest
+    app.config["MONGO_URI"] = "mongodb+srv://admin_db:topolino@db-cluster-bp.thr7b8f.mongodb.net/db_bp_products?retryWrites=true&w=majority"
     mongo.init_app(app)
 
     # Crear rutas a la db en la raíz

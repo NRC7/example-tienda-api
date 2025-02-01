@@ -2,7 +2,7 @@ from .models import User
 from .database import db
 from .services import serialize_mongo_document, validate_product_data, validate_and_filter_update_data
 from flask_pymongo import PyMongo
-from pymongo import DESCENDING
+from pymongo import DESCENDING, MongoClient
 
 
 # Registrar un usuario
@@ -64,6 +64,9 @@ def get_products_from_mongo(mongo: PyMongo):
             "dealPrice": product.get("dealPrice"),
             "discountPercentage": product.get("discountPercentage"),
             "imageResources": product.get("imageResources"),
+            "subCategory": product.get("subCategory"),
+            "description": product.get("description"),
+            "freeShiping": product.get("freeShiping")
         }
         for product in products
     ]
@@ -100,6 +103,22 @@ def get_product_by_id(mongo: PyMongo, product_id: str):
         return serialize_mongo_document(product)
     except Exception as e:
         raise Exception(f"Error al obtener el producto: {e}")
+    
+# Obtener todos los productos de una categoria
+def get_products_by_category(mongo: PyMongo, product_category: str):
+    try:
+        products = [product for product in get_products_from_mongo(mongo) if product["category"] == product_category]
+        return products
+    except Exception as e:
+        raise Exception(f"Error al obtener productos por categoria: {e}")
+
+# Obtener todos los productos de una sub categoria
+def get_products_by_subCategory(mongo: PyMongo, product_category: str, product_subCategory: str):
+    try:
+        products = [product for product in get_products_by_category(mongo, product_category) if product["subCategory"] == product_subCategory]
+        return products
+    except Exception as e:
+        raise Exception(f"Error al obtener productos por subCategoria: {e}")         
 
 
 # Actualizar un producto por su ID

@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from .crud import (
     get_users, update_user, delete_user, register_user, get_user_by_email,
     get_products_from_mongo, delete_product, update_product, get_product_by_id,
-    create_product
+    create_product, get_products_by_category, get_products_by_subCategory
 )
 from flask_jwt_extended import create_access_token
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -71,6 +71,46 @@ def get_products():
             "code": "500",
             "message": f"Error al obtener productos: {str(e)}"
         }), 500
+
+# Endpoint para obtener todos los productos de una categoria
+@main.route('/products/<string:product_category>', methods=['GET'])
+@cross_origin(origins="http://localhost:3000")
+def get_products_by_category_route(product_category):
+    try:
+        # Delegar la consulta a MongoDB
+        product_list = get_products_by_category(mongo, product_category)
+        return jsonify({
+            "code": "200",
+            "len": len(product_list),
+            "message": "Productos obtenidos exitosamente",
+            "data": product_list
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "code": "500",
+            "message": f"Error al obtener productos: {str(e)}"
+        }), 500    
+    
+# Endpoint para obtener todos los productos de una subCategoria
+@main.route('/products/<string:product_category>/<string:product_subCategory>', methods=['GET'])
+@cross_origin(origins="http://localhost:3000")
+def get_products_by_subCategory_route(product_category, product_subCategory):
+    try:
+        # Delegar la consulta a MongoDB
+        product_list = get_products_by_subCategory(mongo, product_category, product_subCategory)
+        return jsonify({
+            "code": "200",
+            "len": len(product_list),
+            "message": "Productos obtenidos exitosamente",
+            "data": product_list
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "code": "500",
+            "message": f"Error al obtener productos: {str(e)}"
+        }), 500        
 
 
 # Obtener un producto por su ID

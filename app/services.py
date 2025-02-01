@@ -13,11 +13,14 @@ def validate_product_data(product_data: dict):
     required_fields = [
         "name",
         "category",
+        "subCategory",
         "normalPrice",
         "dealPrice",
         "discountPercentage",
         "rating",
-        "imageResources"
+        "imageResources",
+        "description",
+        "freeShiping"
     ]
     missing_fields = [field for field in required_fields if field not in product_data]
     
@@ -33,11 +36,14 @@ def validate_and_filter_update_data(update_data: dict):
     required_fields = [
         "name",
         "category",
+        "subCategory",
         "normalPrice",
         "dealPrice",
         "discountPercentage",
         "rating",
-        "imageResources"
+        "imageResources",
+        "description",
+        "freeShiping"
     ]
     filtered_data = {key: value for key, value in update_data.items() if key in required_fields}
     

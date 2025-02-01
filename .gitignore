@@ -37,3 +37,6 @@ Desktop.ini
 # Ignorar bases de datos
 test.db
 trivia.db
+
+# Ignorar collecionts
+collections/
