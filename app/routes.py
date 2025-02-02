@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from .crud import (
     get_users, update_user, delete_user, register_user, get_user_by_email,
-    get_products_from_mongo, delete_product, update_product, get_product_by_id,
+    get_products_from_mongo, deactivate_product, update_product, get_product_by_sku,
     create_product, get_products_by_category, get_products_by_subCategory
 )
 from flask_jwt_extended import create_access_token
@@ -115,11 +115,11 @@ def get_products_by_subCategory_route(product_category, product_subCategory):
         }), 500        
 
 
-# Obtener un producto por su ID
-@main.route('/products/<string:product_id>', methods=['GET'])
-def get_product_route(product_id):
+# Obtener un producto por su SKU
+@main.route('/products/<string:product_sku>', methods=['GET'])
+def get_product_route(product_sku):
     try:
-        product = get_product_by_id(mongo, product_id)
+        product = get_product_by_sku(mongo, product_sku)
         if not product:
             raise NotFound("Producto no encontrado")
 
@@ -148,15 +148,15 @@ def create_product_route():
 
 
 # Actualizar un producto
-@main.route('/products/<string:product_id>', methods=['PUT'])
+@main.route('/products/<string:product_sku>', methods=['PUT'])
 @jwt_required_middleware(role="admin")
-def update_product_route(product_id):
+def update_product_route(product_sku):
     try:
         update_data = request.get_json()
         if not update_data:
             raise BadRequest("Datos de actualización no proporcionados")
 
-        updated_product = update_product(mongo, product_id, update_data)
+        updated_product = update_product(mongo, product_sku, update_data)
         if not updated_product:
             raise NotFound("Producto no encontrado")
 
@@ -169,22 +169,24 @@ def update_product_route(product_id):
         return handle_generic_error(e)
 
 
-# Eliminar un producto
-@main.route('/products/<string:product_id>', methods=['DELETE'])
-@jwt_required_middleware(role="admin")
-def delete_product_route(product_id):
+# Desactivar un producto
+@main.route('/products/<string:product_sku>', methods=['PUT'])
+#@jwt_required_middleware(role="admin")
+def deactivate_product_route(product_sku):
     try:
-        deleted = delete_product(mongo, product_id)
-        if not deleted:
+        deactivated = deactivate_product(mongo, product_sku)
+        if not deactivated:
             raise NotFound("Producto no encontrado")
 
-        return jsonify({"code": "200", "message": "Producto eliminado exitosamente"}), 200
+        return jsonify({"code": "200", "message": "Producto desactivado exitosamente"}), 200
     except NotFound as e:
         return handle_not_found_error(e)
     except Exception as e:
         return handle_generic_error(e)
-    
 
+
+
+## RUTAS PARA USER ##
 # Endpoint para registrar usuarios
 @main.route('/register', methods=['POST'])
 def register():
