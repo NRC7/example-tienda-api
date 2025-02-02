@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from datetime import timedelta
 from middlewares.middlewares import jwt_required_middleware
 import re
-from app import mongo
+from app import mongo, limiter
 from flask_cors import cross_origin
 from pymongo.errors import PyMongoError
 from http.client import HTTPException
@@ -54,6 +54,8 @@ def handle_generic_error(e):
 
 # Endpoint para obtener todos los productos
 @main.route('/products', methods=['GET'])
+# Aplicamos rate limiting para evitar abuso
+# @limiter.limit("2 per minute")  
 @cross_origin(origins="http://localhost:3000")
 def get_products():
     try:

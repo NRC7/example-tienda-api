@@ -5,6 +5,11 @@ from .database import db
 from flask_jwt_extended import JWTManager
 from flask_pymongo import PyMongo
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
+# Configuraion inicial Flask-Limiter (máximo de solicitudes por minuto por IP)
+limiter = Limiter(key_func=get_remote_address)  # NO PASAMOS 'app' AQUÍ
 
 # Cargar las variables de entorno
 load_dotenv()
@@ -19,6 +24,9 @@ def create_app():
     # CORS(app, resources={r"/*": {"origins": "http://localhost:5000"}})
     app.config["CORS_ORIGINS"] = ["http://localhost:5000"]  
     CORS(app)
+
+    # Inicializar Flask-Limiter con la aplicación
+    limiter.init_app(app)
 
     # Configuración de la base de datos
     # Si se borra la DB al reemplazar el nombre en el string usar "_" no "-" porque mongo los trata como char de rest
