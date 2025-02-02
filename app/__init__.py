@@ -16,7 +16,9 @@ def create_app():
     app = Flask(__name__)
 
     # Permitir solicitudes desde el origen de tu frontend (React)
-    CORS(app, resources={r"/*": {"origins": "http://localhost:5000"}})
+    # CORS(app, resources={r"/*": {"origins": "http://localhost:5000"}})
+    app.config["CORS_ORIGINS"] = ["http://localhost:5000"]  
+    CORS(app)
 
     # Configuración de la base de datos
     # Si se borra la DB al reemplazar el nombre en el string usar "_" no "-" porque mongo los trata como char de rest
