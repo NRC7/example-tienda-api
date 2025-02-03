@@ -22,7 +22,7 @@ def create_app():
 
     # Permitir solicitudes desde el origen de tu frontend (React)
     # CORS(app, resources={r"/*": {"origins": "http://localhost:5000"}})
-    app.config["CORS_ORIGINS"] = ["http://localhost:5000"]  
+    app.config["CORS_ORIGINS"] = ["http://localhost:5000", "http://localhost:3000"]  
     CORS(app)
 
     # Inicializar Flask-Limiter con la aplicación

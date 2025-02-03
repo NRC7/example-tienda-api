@@ -10,14 +10,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import BadRequest, NotFound
 from app.models import User
 from sqlalchemy.exc import IntegrityError
-from datetime import timedelta
 from middlewares.middlewares import jwt_required_middleware
-import re
 from app import mongo, limiter
 from flask_cors import cross_origin
 from pymongo.errors import PyMongoError
 from http.client import HTTPException
-import json
 
 
 main = Blueprint('main', __name__)
@@ -56,7 +53,7 @@ def handle_generic_error(e):
 # Endpoint para obtener todos los productos
 @main.route('/products', methods=['GET'])
 # @limiter.limit("2 per minute")  
-@cross_origin(origins="http://localhost:3000")
+# @cross_origin(origins="http://localhost:3000")
 def get_products():
     try:
         # Delegar la consulta a MongoDB
@@ -74,9 +71,10 @@ def get_products():
             "message": f"Error al obtener productos: {str(e)}"
         }), 500
 
+
 # Endpoint para obtener todos los productos de una categoria
 @main.route('/products/<string:product_category>', methods=['GET'])
-@cross_origin(origins="http://localhost:3000")
+# @cross_origin(origins="http://localhost:3000")
 def get_products_by_category_route(product_category):
     try:
         # Delegar la consulta a MongoDB
@@ -93,10 +91,11 @@ def get_products_by_category_route(product_category):
             "code": "500",
             "message": f"Error al obtener productos: {str(e)}"
         }), 500    
-    
+
+
 # Endpoint para obtener todos los productos de una subCategoria
 @main.route('/products/<string:product_category>/<string:product_subCategory>', methods=['GET'])
-@cross_origin(origins="http://localhost:3000")
+# @cross_origin(origins="http://localhost:3000")
 def get_products_by_subCategory_route(product_category, product_subCategory):
     try:
         # Delegar la consulta a MongoDB
@@ -128,6 +127,27 @@ def get_product_by_sku_route(product_sku: str):
         return handle_not_found_error(e)
     except Exception as e:
         return handle_generic_error(e)
+
+
+# Obtener listado de imagenes
+@main.route('/banner_images', methods=['GET'])
+# @cross_origin(origins="http://localhost:3000")
+def get_banner_images_route():
+    try:
+        # Delegar la consulta a MongoDB
+        banner_images_list = get_banner_images_from_mongo(mongo)
+        return jsonify({    
+            "code": "200",
+            "len": len(banner_images_list),
+            "message": "Imagenes obtenidas exitosamente",
+            "data": banner_images_list
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "code": "500",
+            "message": f"Error al obtener imagenes: {str(e)}"
+        }), 500
 
 
 # Crear un nuevo producto
@@ -183,26 +203,6 @@ def deactivate_product_route(product_sku):
         return handle_not_found_error(e)
     except Exception as e:
         return handle_generic_error(e)
-
-# Obtener listado de imagenes
-@main.route('/banner_images', methods=['GET'])
-@cross_origin(origins="http://localhost:3000")
-def get_banner_images_route():
-    try:
-        # Delegar la consulta a MongoDB
-        banner_images_list = get_banner_images_from_mongo(mongo)
-        return jsonify({    
-            "code": "200",
-            "len": len(banner_images_list),
-            "message": "Imagenes obtenidas exitosamente",
-            "data": banner_images_list
-        }), 200
-
-    except Exception as e:
-        return jsonify({
-            "code": "500",
-            "message": f"Error al obtener imagenes: {str(e)}"
-        }), 500
 
 
 

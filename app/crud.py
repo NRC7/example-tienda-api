@@ -2,7 +2,6 @@ from .models import User
 from .database import db
 from .services import serialize_mongo_document, validate_product_data, validate_and_filter_update_data
 from flask_pymongo import PyMongo
-from pymongo import DESCENDING, MongoClient
 
 
 # Consultar productos desde MongoDB
@@ -22,7 +21,8 @@ def get_products_from_mongo(mongo: PyMongo):
             "subCategory": product.get("subCategory"),
             "description": product.get("description"),
             "freeShiping": product.get("freeShiping"),
-            "isActive": product.get("isActive")
+            "isActive": product.get("isActive"),
+            "uploadDateTime": product.get("uploadDateTime")
         }
         for product in products
     ]
