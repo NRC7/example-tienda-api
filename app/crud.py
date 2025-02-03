@@ -27,6 +27,16 @@ def get_products_from_mongo(mongo: PyMongo):
         for product in products
     ]
 
+# Consultar imagenes del banner desde MongoDB
+def get_banner_images_from_mongo(mongo: PyMongo):
+    banner_images = mongo.db.bannerImages.find()
+    return [
+        {
+            "name": image.get("name"),
+            "imageResources": image.get("imageResources")
+        }
+        for image in banner_images
+    ]
 
 # Crear un producto
 def create_product(mongo: PyMongo, product_data: dict):
@@ -55,8 +65,8 @@ def create_product(mongo: PyMongo, product_data: dict):
 # Obtener un producto por su SKU
 def get_product_by_sku(mongo: PyMongo, product_sku: str):
     try:
-        product = mongo.db.products.find_one({"sku": product_sku})
-        return serialize_mongo_document(product)
+        #product = mongo.db.products.find_one({"sku": product_sku})
+        return serialize_mongo_document(mongo.db.products.find_one({"sku": product_sku}))
     except Exception as e:
         raise Exception(f"Error al obtener el producto: {e}")
     

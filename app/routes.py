@@ -2,7 +2,8 @@ from flask import Blueprint, request, jsonify
 from .crud import (
     get_users, update_user, delete_user, register_user, get_user_by_email,
     get_products_from_mongo, deactivate_product, update_product, get_product_by_sku,
-    create_product, get_products_by_category, get_products_by_subCategory
+    create_product, get_products_by_category, get_products_by_subCategory,
+    get_banner_images_from_mongo
 )
 from flask_jwt_extended import create_access_token
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -54,7 +55,6 @@ def handle_generic_error(e):
 
 # Endpoint para obtener todos los productos
 @main.route('/products', methods=['GET'])
-# Aplicamos rate limiting para evitar abuso
 # @limiter.limit("2 per minute")  
 @cross_origin(origins="http://localhost:3000")
 def get_products():
@@ -116,10 +116,10 @@ def get_products_by_subCategory_route(product_category, product_subCategory):
 
 
 # Obtener un producto por su SKU
-@main.route('/products/<string:product_sku>', methods=['GET'])
-def get_product_route(product_sku):
+@main.route('/products/bysku/<string:product_sku>', methods=['GET'])
+def get_product_by_sku_route(product_sku: str):
     try:
-        product = get_product_by_sku(mongo, product_sku)
+        product = get_product_by_sku(mongo, str(product_sku))
         if not product:
             raise NotFound("Producto no encontrado")
 
@@ -170,7 +170,7 @@ def update_product_route(product_sku):
 
 
 # Desactivar un producto
-@main.route('/products/<string:product_sku>', methods=['PUT'])
+@main.route('/products/<string:product_sku>', methods=['DELETE'])
 #@jwt_required_middleware(role="admin")
 def deactivate_product_route(product_sku):
     try:
@@ -183,6 +183,28 @@ def deactivate_product_route(product_sku):
         return handle_not_found_error(e)
     except Exception as e:
         return handle_generic_error(e)
+
+# Obtener listado de imagenes
+@main.route('/banner_images', methods=['GET'])
+@cross_origin(origins="http://localhost:3000")
+def get_banner_images_route():
+    try:
+        # Delegar la consulta a MongoDB
+        banner_images_list = get_banner_images_from_mongo(mongo)
+        return jsonify({    
+            "code": "200",
+            "len": len(banner_images_list),
+            "message": "Imagenes obtenidas exitosamente",
+            "data": banner_images_list
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "code": "500",
+            "message": f"Error al obtener imagenes: {str(e)}"
+        }), 500
+
+
 
 
 
