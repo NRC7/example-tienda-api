@@ -1,14 +1,13 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, make_response
 from .crud import (
-    get_users, update_user, delete_user, register_user, get_user_by_email,
+    get_users, update_user, delete_user, register_user, get_user_by_username, get_user_by_id,
     get_products_from_mongo, deactivate_product, update_product, get_product_by_sku,
     create_product, get_products_by_category, get_products_by_subCategory,
     get_banner_images_from_mongo
 )
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import BadRequest, NotFound
-from app.models import User
 from sqlalchemy.exc import IntegrityError
 from middlewares.middlewares import jwt_required_middleware
 from app import mongo, limiter
@@ -39,7 +38,7 @@ def handle_not_found_error(e):
 
 @main.errorhandler(IntegrityError)
 def handle_integrity_error(e):
-    return jsonify({"code": "400", "message": "Database integrity error."}), 400
+    return jsonify({"code": "400", "message": f"Database integrity error: {str(e)}"}), 400
 
 @main.errorhandler(HTTPException)
 def handle_http_error(e):
@@ -214,41 +213,75 @@ def deactivate_product_route(product_sku):
 def register():
     try:
         data = request.get_json()
-        name = data.get('name')
+        name = data.get('user_name')
         email = data.get('email')
-        password = data.get('password')
-        role = data.get('role', 'jugador')
+        #password = data.get('password')
+        hashed_password = generate_password_hash(data.get('password')) 
+        role = 'user'
 
-        if not all([name, email, password]):
-            raise HTTPException(description="Missing required fields", code=400)
+        if not all([name, email, hashed_password]):
+            return jsonify({"code": "400", "message": "Missing required fields"}), 400
 
-        hashed_password = generate_password_hash(password)
-        user = register_user(name, email, hashed_password, role)
-        return jsonify({"code": "201", "message": "User registered", "user_id": user.id}), 201
+        user = register_user(mongo, name, email, hashed_password, role)
+        
+        return jsonify({"code": "201", "message": f"User registered: {user.get('userName')}"}), 201
     except IntegrityError as e:
         return handle_integrity_error(e)
-    
 
 # Endpoint para login
 @main.route('/login', methods=['POST'])
 def login():
     try:
         data = request.get_json()
-        email = data.get('email')
+        userName = data.get('user_name')
         password = data.get('password')
 
-        if not all([email, password]):
-            raise HTTPException(description="Missing email or password", code=400)
+        if not all([userName, password]):
+            return jsonify({"code": "400", "message": "Invalid credentials"}), 400
 
-        user = get_user_by_email(email)
-        if not user or not check_password_hash(user.password, password):
-            raise HTTPException(description="Invalid credentials", code=401)
+        user = get_user_by_username(mongo, userName)
+        if not isinstance(user, dict) or not user or not check_password_hash(user.get('password'), password):
+            return jsonify({"code": "401", "message": "Invalid credentials"}), 401  
+        
+        access_token = create_access_token(identity=str(user.get('_id')), fresh=True)
+        refresh_token = create_refresh_token(identity=str(user.get('_id')))
 
-        token = create_access_token(identity=str(user.id))
-        return jsonify({"code": "200", "message": "Login successful", "token": token}), 200
+        response = make_response(
+            jsonify({
+                "code": "200",
+                "message": "Login successful",
+                "access_token": access_token
+            }),
+            200
+        )
+
+        response.set_cookie(
+            'refresh_token_cookie', 
+            refresh_token, 
+            httponly=True, 
+            secure=False,  # Si https True
+            samesite='Lax',
+            max_age=1800  # Duración de la cookie (0.5 horas, por ejemplo)
+        )
+
+        return response
     except Exception as e:
         return handle_generic_error(e)
-    
+
+@main.route("/refresh", methods=["POST"])
+@jwt_required_middleware(refresh=True)
+def refresh():
+    try:
+        identity = get_jwt_identity()
+        new_access_token = create_access_token(identity=identity, fresh=True)
+        return jsonify({
+                    "code": "200",
+                    "message": "Refresh successful",
+                    "access_token": new_access_token
+                })
+    except Exception as e:
+        return handle_generic_error(e)   
+
 
 # Endpoint para obtener lista de usuarios
 @main.route('/users', methods=['GET'])

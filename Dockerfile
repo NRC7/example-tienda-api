@@ -16,5 +16,8 @@ COPY . .
 # Expón el puerto 5000 donde Flask se ejecuta
 EXPOSE 5000
 
-# Establece el comando para ejecutar la app en el contenedor
+# Ejecutar app en el contenedor env development
 CMD ["flask", "run", "--host=0.0.0.0"]
+
+# Ejecutar app en el contenedor env production
+# CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]

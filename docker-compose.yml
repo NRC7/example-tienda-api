@@ -1,17 +1,23 @@
 #version: '3.8'
 
 services:
-  web:
+  api:
     build: .
     ports:
       - "5000:5000"
     environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=development            # development, production
+      - FLASK_DEBUG=1                    # 1 development, 0 o nada production
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    #depends_on:
+      #- redis  
     volumes:
       - .:/app                           # Volumen para sincronizar el código
-      - ./trivia.db:/app/trivia.db        # Volumen para persistir la base de datos (en la raíz del contenedor)
     command: flask run --host=0.0.0.0    # Ejecuta la aplicación
-    restart: always                     # Asegura que el contenedor se reinicie automáticamente
-
-volumes:
-  db_data:                               # Volumen para persistencia de la base de datos
+    restart: always  
+    
+#redis:
+    #image: "redis:latest"
+    #ports:
+      #- "6379:6379"                       # Asegura que el contenedor se reinicie automáticamente

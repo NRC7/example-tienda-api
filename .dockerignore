@@ -37,11 +37,20 @@ Desktop.ini
 # Ignorar collecionts
 collections/
 
+# Git
+.git
+.gitignore
+
+
 # IDE
 .vscode
 .idea
 *.swp
 *.swo
+
+# Testing
+test/
+.pytest_cache/
 
 # OS
 .DS_Store

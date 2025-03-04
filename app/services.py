@@ -1,4 +1,4 @@
-from bson import ObjectId
+
 
 def serialize_mongo_document(document):
     """Convierte todos los ObjectId de un documento MongoDB a cadenas JSON serializables."""
@@ -28,6 +28,19 @@ def validate_product_data(product_data: dict):
     
     if missing_fields:
         raise ValueError(f"Faltan los siguientes campos obligatorios: {', '.join(missing_fields)}")
+    
+def validate_user_data(user_data: dict):
+    """Valida que todos los campos requeridos estén presentes en el producto."""
+    required_fields = [
+        "userName",
+        "email",
+        "password",
+        "role"
+    ]
+    missing_fields = [field for field in required_fields if field not in user_data]
+    
+    if missing_fields:
+        raise ValueError(f"Faltan los siguientes campos obligatorios: {', '.join(missing_fields)}")    
 
 def validate_and_filter_update_data(update_data: dict):
     """Filtra los campos permitidos para la actualización."""

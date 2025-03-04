@@ -1,12 +1,11 @@
-from .models import User
-from .database import db
-from .services import serialize_mongo_document, validate_product_data, validate_and_filter_update_data
+from .services import serialize_mongo_document, validate_product_data, validate_user_data, validate_and_filter_update_data
 from flask_pymongo import PyMongo
+from bson.objectid import ObjectId
 
 
 # Consultar productos desde MongoDB
 def get_products_from_mongo(mongo: PyMongo):
-    products = mongo.db.products.find()
+    products = mongo.db.products.find({"isActive": "true"})
     return [
         {
             "_id": str(product["_id"]),
@@ -119,46 +118,68 @@ def deactivate_product(mongo: PyMongo, product_sku: str):
 
 ## CRUD PARA USER ##
 # Registrar un usuario
-def register_user(name, email, hashed_password, role="jugador"):
-    user = User(name=name, email=email, password=hashed_password, role=role)
-    db.session.add(user)
-    db.session.commit()
-    return user
+def register_user(mongo: PyMongo, name: str, email: str, hashed_password: str, role: str):
+    try:
+        # Crear dict para validacion
+        user_data = {
+        "userName": name,
+        "email": email,
+        "password": hashed_password,
+        "role": role,
+        }
+
+        # Validar que todos los campos obligatorios estén presentes
+        validate_user_data(user_data)
+
+        result = mongo.db.users.insert_one(user_data)
+
+        # Obtener y serializar el documento recién creado
+        return serialize_mongo_document(
+            mongo.db.users.find_one({"_id": result.inserted_id})
+        )
+    except ValueError as e:
+        # Manejar errores de validación
+        raise Exception(f"Error de validación: {e}")
+    except Exception as e:
+        raise Exception(f"Error al crear el producto: {e}")
 
 
-# Obtener un usuario por email
-def get_user_by_email(email):
-    return User.query.filter_by(email=email).first()
+# Obtener un usuario por username
+def get_user_by_username(mongo: PyMongo, userName: str):
+    try:
+        #product = mongo.db.products.find_one({"sku": product_sku})
+        return serialize_mongo_document(mongo.db.users.find_one({"userName": userName}))
+    except Exception as e:
+        raise Exception(f"Error al obtener el user: {e}")
 
+# Obtener un usuario por _id
+def get_user_by_id(mongo: PyMongo, _id: str):
+    try:
+        #product = mongo.db.products.find_one({"sku": product_sku})
+        return serialize_mongo_document(mongo.db.users.find_one({"_id": ObjectId(_id)}))
+    except Exception as e:
+        raise Exception(f"Error al obtener el user: {e}")    
+    
 
 # Obtener todos los usuarios con batch fetching
-def get_users(batch_size=100):
-    offset = 0
-    while True:
-        batch = User.query.offset(offset).limit(batch_size).all()
-        if not batch:
-            break
-        yield batch
-        offset += batch_size
+def get_users():
+    return True
 
 
 # Actualizar un usuario
 def update_user(user_id, new_data):
-    user = User.query.get(user_id)
+    user = user_id
     if not user:
         return None
     for key, value in new_data.items():
         setattr(user, key, value)
-    db.session.commit()
     return user
 
 
 # Borrar un usuario
 def delete_user(user_id):
-    user = User.query.get(user_id)
+    user = user_id
     if not user:
         return False
-    db.session.delete(user)
-    db.session.commit()
     return True
 
