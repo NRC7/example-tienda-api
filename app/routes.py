@@ -1,214 +1,56 @@
+import os
 from flask import Blueprint, request, jsonify, make_response
 from .crud import (
-    get_users, update_user, delete_user, register_user, get_user_by_username, get_user_by_id,
+    get_users, update_user, delete_user, register_user, get_user_by_email, update_order_status,
     get_products_from_mongo, deactivate_product, update_product, get_product_by_sku,
-    create_product, get_products_by_category, get_products_by_subCategory,
-    get_banner_images_from_mongo
+    create_product, get_products_by_category, get_products_by_subCategory, get_user_by_id,
+    get_banner_images_from_mongo, create_checkout, get_orders_from_mongo, get_orders_by_user, update_user
 )
 from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.exceptions import BadRequest, NotFound
-from sqlalchemy.exc import IntegrityError
 from middlewares.middlewares import jwt_required_middleware
 from app import mongo, limiter
-from flask_cors import cross_origin
-from pymongo.errors import PyMongoError
-from http.client import HTTPException
+from handlers.error_handler import ErrorHandler
+from datetime import datetime
 
 
 main = Blueprint('main', __name__)
 
 
-# Handlers para errores
-@main.errorhandler(BadRequest)
-def handle_bad_request_error(e):
-    return jsonify({"code": "500", "message": f"BadRequest: {str(e)}"}), 500
-
-@main.app_errorhandler(Exception)
-def handle_generic_error(e):
-    return jsonify({"code": "500", "message": f"Error interno del servidor: {str(e)}"}), 500
-
-@main.app_errorhandler(PyMongoError)
-def handle_pymongo_error(e):
-    return jsonify({"code": "500", "message": f"Error de base de datos: {str(e)}"}), 500
-
-@main.app_errorhandler(404)
-def handle_not_found_error(e):
-    return jsonify({"code": "404", "message": "Recurso no encontrado"}), 404
-
-@main.errorhandler(IntegrityError)
-def handle_integrity_error(e):
-    return jsonify({"code": "400", "message": f"Database integrity error: {str(e)}"}), 400
-
-@main.errorhandler(HTTPException)
-def handle_http_error(e):
-    return jsonify({"code": e.code, "message": e.description}), e.code
-
-@main.errorhandler(Exception)
-def handle_generic_error(e):
-    return jsonify({"code": "500", "message": f"Internal server error: {str(e)}"}), 500
-
+## RUTAS APP ##
 
 # Endpoint para obtener todos los productos
 @main.route('/products', methods=['GET'])
-# @limiter.limit("2 per minute")  
-# @cross_origin(origins="http://localhost:3000")
+@limiter.limit("2 per minute")  
 def get_products():
     try:
-        # Delegar la consulta a MongoDB
         product_list = get_products_from_mongo(mongo)
         return jsonify({
             "code": "200",
             "len": len(product_list),
-            "message": "Productos obtenidos exitosamente",
+            "message": "Fetch products successfully",
             "data": product_list
         }), 200
-
     except Exception as e:
-        return jsonify({
-            "code": "500",
-            "message": f"Error al obtener productos: {str(e)}"
-        }), 500
-
-
-# Endpoint para obtener todos los productos de una categoria
-@main.route('/products/<string:product_category>', methods=['GET'])
-# @cross_origin(origins="http://localhost:3000")
-def get_products_by_category_route(product_category):
-    try:
-        # Delegar la consulta a MongoDB
-        product_list = get_products_by_category(mongo, product_category)
-        return jsonify({
-            "code": "200",
-            "len": len(product_list),
-            "message": "Productos obtenidos exitosamente",
-            "data": product_list
-        }), 200
-
-    except Exception as e:
-        return jsonify({
-            "code": "500",
-            "message": f"Error al obtener productos: {str(e)}"
-        }), 500    
-
-
-# Endpoint para obtener todos los productos de una subCategoria
-@main.route('/products/<string:product_category>/<string:product_subCategory>', methods=['GET'])
-# @cross_origin(origins="http://localhost:3000")
-def get_products_by_subCategory_route(product_category, product_subCategory):
-    try:
-        # Delegar la consulta a MongoDB
-        product_list = get_products_by_subCategory(mongo, product_category, product_subCategory)
-        return jsonify({
-            "code": "200",
-            "len": len(product_list),
-            "message": "Productos obtenidos exitosamente",
-            "data": product_list
-        }), 200
-
-    except Exception as e:
-        return jsonify({
-            "code": "500",
-            "message": f"Error al obtener productos: {str(e)}"
-        }), 500        
-
-
-# Obtener un producto por su SKU
-@main.route('/products/bysku/<string:product_sku>', methods=['GET'])
-def get_product_by_sku_route(product_sku: str):
-    try:
-        product = get_product_by_sku(mongo, str(product_sku))
-        if not product:
-            raise NotFound("Producto no encontrado")
-
-        return jsonify({"code": "200", "message": "Producto obtenido exitosamente", "data": product}), 200
-    except NotFound as e:
-        return handle_not_found_error(e)
-    except Exception as e:
-        return handle_generic_error(e)
-
+        return ErrorHandler.internal_server_error(f"Error fetching products r: {str(e)}")
 
 # Obtener listado de imagenes
 @main.route('/banner_images', methods=['GET'])
-# @cross_origin(origins="http://localhost:3000")
+@limiter.limit("2 per minute")  
 def get_banner_images_route():
     try:
-        # Delegar la consulta a MongoDB
         banner_images_list = get_banner_images_from_mongo(mongo)
         return jsonify({    
             "code": "200",
             "len": len(banner_images_list),
-            "message": "Imagenes obtenidas exitosamente",
+            "message": "Fetch images successfully",
             "data": banner_images_list
         }), 200
-
     except Exception as e:
-        return jsonify({
-            "code": "500",
-            "message": f"Error al obtener imagenes: {str(e)}"
-        }), 500
+        return ErrorHandler.internal_server_error(f"Error fetching images r: {str(e)}")
 
-
-# Crear un nuevo producto
-@main.route('/products', methods=['POST'])
-@jwt_required_middleware(role="admin")
-def create_product_route():
-    try:
-        product_data = request.get_json()
-        if not product_data:
-            raise BadRequest("Datos del producto no proporcionados")
-
-        new_product = create_product(mongo, product_data)
-        return jsonify({"code": "201", "message": "Producto creado exitosamente", "data": new_product}), 201
-    except BadRequest as e:
-        return handle_bad_request_error(e)
-    except Exception as e:
-        return handle_generic_error(e)
-
-
-# Actualizar un producto
-@main.route('/products/<string:product_sku>', methods=['PUT'])
-@jwt_required_middleware(role="admin")
-def update_product_route(product_sku):
-    try:
-        update_data = request.get_json()
-        if not update_data:
-            raise BadRequest("Datos de actualización no proporcionados")
-
-        updated_product = update_product(mongo, product_sku, update_data)
-        if not updated_product:
-            raise NotFound("Producto no encontrado")
-
-        return jsonify({"code": "200", "message": "Producto actualizado exitosamente", "data": updated_product}), 200
-    except BadRequest as e:
-        return handle_bad_request_error(e)
-    except NotFound as e:
-        return handle_not_found_error(e)
-    except Exception as e:
-        return handle_generic_error(e)
-
-
-# Desactivar un producto
-@main.route('/products/<string:product_sku>', methods=['DELETE'])
-#@jwt_required_middleware(role="admin")
-def deactivate_product_route(product_sku):
-    try:
-        deactivated = deactivate_product(mongo, product_sku)
-        if not deactivated:
-            raise NotFound("Producto no encontrado")
-
-        return jsonify({"code": "200", "message": "Producto desactivado exitosamente"}), 200
-    except NotFound as e:
-        return handle_not_found_error(e)
-    except Exception as e:
-        return handle_generic_error(e)
-
-
-
-
-
-## RUTAS PARA USER ##
 # Endpoint para registrar usuarios
+@limiter.limit("2 per minute")  
 @main.route('/register', methods=['POST'])
 def register():
     try:
@@ -220,28 +62,36 @@ def register():
         role = 'user'
 
         if not all([name, email, hashed_password]):
-            return jsonify({"code": "400", "message": "Missing required fields"}), 400
+            return ErrorHandler.bad_request_error("Missing required fields r")
+        
+        existingUser = get_user_by_email(mongo, email)
+        if existingUser: 
+            return ErrorHandler.not_acceptable_error("Email already exist r")    
 
         user = register_user(mongo, name, email, hashed_password, role)
-        
-        return jsonify({"code": "201", "message": f"User registered: {user.get('userName')}"}), 201
-    except IntegrityError as e:
-        return handle_integrity_error(e)
+
+        return jsonify({"code": "201", "message": f"User registered successfully: {user.get('userName')}"}), 201
+    except Exception as e:
+        return ErrorHandler.internal_server_error(f"error when registering user r: {str(e)}")
 
 # Endpoint para login
 @main.route('/login', methods=['POST'])
+@limiter.limit("3 per 2 minute") 
 def login():
     try:
         data = request.get_json()
-        userName = data.get('user_name')
+        email = data.get('email')
         password = data.get('password')
 
-        if not all([userName, password]):
-            return jsonify({"code": "400", "message": "Invalid credentials"}), 400
+        if not all([email, password]):
+            return ErrorHandler.bad_request_error("Missing required credentials r")
 
-        user = get_user_by_username(mongo, userName)
-        if not isinstance(user, dict) or not user or not check_password_hash(user.get('password'), password):
-            return jsonify({"code": "401", "message": "Invalid credentials"}), 401  
+        user = get_user_by_email(mongo, email)
+        if not isinstance(user, dict) or not user: 
+            return ErrorHandler.not_found_error("User does not exist r")
+        
+        if not check_password_hash(user.get('password'), password):
+            return ErrorHandler.invalid_credentials_error("r")
         
         access_token = create_access_token(identity=str(user.get('_id')), fresh=True)
         refresh_token = create_refresh_token(identity=str(user.get('_id')))
@@ -259,17 +109,19 @@ def login():
             'refresh_token_cookie', 
             refresh_token, 
             httponly=True, 
-            secure=False,  # Si https True
+            secure=os.getenv("COOKIE_SECURE"),  # Si https True
             samesite='Lax',
             max_age=1800  # Duración de la cookie (0.5 horas, por ejemplo)
         )
 
         return response
     except Exception as e:
-        return handle_generic_error(e)
+        return ErrorHandler.internal_server_error(f"Error during authentication r: {str(e)}")
 
+# Endpoint para generar nuevo token de acceso
 @main.route("/refresh", methods=["POST"])
-@jwt_required_middleware(refresh=True)
+@limiter.limit("2 per 5 minute")  
+@jwt_required_middleware(refresh=True, location=['cookies'])
 def refresh():
     try:
         identity = get_jwt_identity()
@@ -280,57 +132,246 @@ def refresh():
                     "access_token": new_access_token
                 })
     except Exception as e:
-        return handle_generic_error(e)   
+        return ErrorHandler.internal_server_error(f"Error when refresing r: {str(e)}")
+    
+# Actualizar un producto
+@main.route('/user/edit', methods=['PUT'])
+@limiter.limit("2 per 5 minute")  
+@jwt_required_middleware(location=['headers'], role="user")
+def update_user_route():
+    try:
+        update_data = request.get_json()
+        if not update_data:
+            return ErrorHandler.bad_request_error("Missing fields r")
+        
+        if get_jwt_identity() != str(update_data.get("_id")):
+            return ErrorHandler.conflict_error("Identities do not match r")
+        
+        updated_user = update_user(mongo, update_data)
+        
+        if not updated_user:
+            return ErrorHandler.not_found_error("User not found r")
 
-
+        return jsonify({"code": "200", "message": "User updated successfully", "data": updated_user}), 200
+    except Exception as e:
+        return ErrorHandler.internal_server_error(f"Error during updating user r: {str(e)}")
+    
 # Endpoint para obtener lista de usuarios
 @main.route('/users', methods=['GET'])
-@jwt_required_middleware(role="admin")
+@limiter.limit("2 per minute") 
+# @jwt_required_middleware(role="admin")
+@jwt_required_middleware(location=['headers'])
 def get_users_route():
     try:
-        users = [user for batch in get_users(batch_size=100) for user in batch]
-        data = [{"id": user.id, "name": user.name, "email": user.email, "role": user.role} for user in users]
-        return jsonify({"code": "200", "message": "Users retrieved successfully.", "data": data}), 200
-    except Exception as e:
-        return handle_generic_error(e)
-
-
-# Endpoint para actualizar un usuario
-@main.route('/users/<int:user_id>', methods=['PUT'])
-@jwt_required_middleware(role="admin")
-def update_user_route(user_id):
-
-    data = request.get_json()
-
-    updated_user = update_user(user_id, data)
-
-    if not updated_user:
+        user_list = get_users(mongo)
         return jsonify({
-            "code": "404",
-            "message": "Usuario no encontrado"
-    }), 404
+            "code": "200",
+            "len": len(user_list),
+            "message": "Fetch users successfully",
+            "data": user_list
+        }), 200
 
-    return jsonify({
-        "code": "200",
-        "message": "Usuario actualizado exitosamente",
-        "data": {
-            "id": updated_user.id,
-            "name": updated_user.name,
-            "email": updated_user.email,
-            "role": updated_user.role
-        }
-    }), 200
+    except Exception as e:
+        return ErrorHandler.internal_server_error(f"Error fetching users r: {str(e)}")
 
+# Endpoint para procesar el checkout
+@main.route('/checkout', methods=['POST'])
+@limiter.limit("2 per minute") 
+@jwt_required_middleware(location=['headers'], role="user")
+def checkout():
+    try:
+        checkout_data = request.get_json()
 
-# Endpoint para borrar un usuario
-@main.route('/users/<int:user_id>', methods=['DELETE'])
-@jwt_required_middleware(role="admin")
-def delete_user_route(user_id):
-    if not delete_user(user_id):
+        if not checkout_data:
+            return ErrorHandler.bad_request_error("Missing mandatory fields r")
 
-        return jsonify({"code": "404", "message": "Usuario no encontrado"}), 404
+        if not get_user_by_id(mongo, get_jwt_identity()):
+            return ErrorHandler.not_found_error("User not found r")
+         
+        checkout_data["user"] = get_jwt_identity()
+        checkout_data["status"] = "pending"
+        checkout_data["lastStatusModificationDate"] = datetime.today()
+        new_checkout = create_checkout(mongo, checkout_data)
+
+        return jsonify({"code": "201", "message": "Order created successfully", "data": new_checkout}), 201
+    except Exception as e:
+        return ErrorHandler.internal_server_error(f"Error procesing order r: {str(e)}")
     
-    return jsonify({"code": "200", "message": "Usuario eliminado exitosamente"}), 200
+# Actualizar estado del pedido
+@main.route('/order/status/edit', methods=['PUT'])
+# @limiter.limit("2 per 5 minute")  
+@jwt_required_middleware(location=['headers'])
+def update_order_status_route():
+    try:
+        update_data = request.get_json()
+        if not update_data:
+            return ErrorHandler.bad_request_error("Missing fields r")
+        
+        updated_order = update_order_status(mongo, update_data)
+        if not updated_order:
+            return ErrorHandler.not_found_error("Updated order not found r")
+        elif not hasattr(updated_order, 'code'):
+            # print(updated_order)
+            code = updated_order["code"]
+            message = updated_order["message"]
+            return ErrorHandler.bad_request_error(f"{code} {message} r")
+
+        return jsonify({"code": "200", "message": "Order status updated successfully", "data": updated_order}), 200
+    except Exception as e:
+        return ErrorHandler.internal_server_error(f"Error during updating order status r: {str(e)}")    
+    
+@main.route('/orders/user', methods=['GET'])
+@limiter.limit("2 per minute") 
+@jwt_required_middleware(location=['headers'])
+def get_orders_by_user_route():
+    try:
+        identity = get_jwt_identity()
+        orders = get_orders_by_user(mongo, identity)
+        return jsonify({    
+            "code": "200",
+            "len": len(orders),
+            "message": "Fetching orders successfully",
+            "data": orders
+        }), 200
+    except Exception as e:
+        return ErrorHandler.internal_server_error(f"Error fetching orders r: {str(e)}")
 
 
 
+## RUTAS ADMIN ##
+
+# # Endpoint para obtener todos los productos de una categoria
+# @main.route('/products/<string:product_category>', methods=['GET'])
+# @limiter.limit("2 per minute") 
+# def get_products_by_category_route(product_category):
+#     try:
+#         # Delegar la consulta a MongoDB
+#         product_list = get_products_by_category(mongo, product_category)
+#         return jsonify({
+#             "code": "200",
+#             "len": len(product_list),
+#             "message": "Productos obtenidos exitosamente",
+#             "data": product_list
+#         }), 200
+
+#     except Exception as e:
+#         return jsonify({
+#             "code": "500",
+#             "message": f"Error al obtener productos: {str(e)} r"
+#         }), 500    
+
+# # Endpoint para obtener todos los productos de una subCategoria
+# @main.route('/products/<string:product_category>/<string:product_subCategory>', methods=['GET'])
+# @limiter.limit("2 per minute") 
+# def get_products_by_subCategory_route(product_category, product_subCategory):
+#     try:
+#         # Delegar la consulta a MongoDB
+#         product_list = get_products_by_subCategory(mongo, product_category, product_subCategory)
+#         return jsonify({
+#             "code": "200",
+#             "len": len(product_list),
+#             "message": "Productos obtenidos exitosamente",
+#             "data": product_list
+#         }), 200
+
+#     except Exception as e:
+#         return jsonify({
+#             "code": "500",
+#             "message": f"Error al obtener productos: {str(e)} r"
+#         }), 500        
+
+# # Obtener un producto por su SKU
+# @main.route('/products/bysku/<string:product_sku>', methods=['GET'])
+# @limiter.limit("2 per minute") 
+# def get_product_by_sku_route(product_sku: str):
+#     try:
+#         product = get_product_by_sku(mongo, str(product_sku))
+#         if not product:
+#             raise NotFound("Producto no encontrado")
+
+#         return jsonify({"code": "200", "message": "Producto obtenido exitosamente", "data": product}), 200
+#     except NotFound as e:
+#         return handle_not_found_error(e)
+#     except Exception as e:
+#         return handle_generic_error(e)
+
+# # Crear un nuevo producto
+# @main.route('/products', methods=['POST'])
+# @limiter.limit("2 per minute") 
+# @jwt_required_middleware(role="admin")
+# def create_product_route():
+#     try:
+#         product_data = request.get_json()
+#         if not product_data:
+#             raise BadRequest("Datos del producto no proporcionados")
+
+#         new_product = create_product(mongo, product_data)
+#         return jsonify({"code": "201", "message": "Producto creado exitosamente", "data": new_product}), 201
+#     except BadRequest as e:
+#         return handle_bad_request_error(e)
+#     except Exception as e:
+#         return handle_generic_error(e)
+
+# # Actualizar un producto
+# @main.route('/products/<string:product_sku>', methods=['PUT'])
+# @limiter.limit("2 per minute") 
+# @jwt_required_middleware(role="admin")
+# def update_product_route(product_sku):
+#     try:
+#         update_data = request.get_json()
+#         if not update_data:
+#             raise BadRequest("Datos de actualización no proporcionados")
+
+#         updated_product = update_product(mongo, product_sku, update_data)
+#         if not updated_product:
+#             raise NotFound("Producto no encontrado")
+
+#         return jsonify({"code": "200", "message": "Producto actualizado exitosamente", "data": updated_product}), 200
+#     except BadRequest as e:
+#         return handle_bad_request_error(e)
+#     except NotFound as e:
+#         return handle_not_found_error(e)
+#     except Exception as e:
+#         return handle_generic_error(e)
+
+# # Desactivar un producto
+# @main.route('/products/<string:product_sku>', methods=['DELETE'])
+# @limiter.limit("2 per minute") 
+# @jwt_required_middleware(role="admin")
+# def deactivate_product_route(product_sku):
+#     try:
+#         deactivated = deactivate_product(mongo, product_sku)
+#         if not deactivated:
+#             raise NotFound("Producto no encontrado")
+
+#         return jsonify({"code": "200", "message": "Producto desactivado exitosamente"}), 200
+#     except NotFound as e:
+#         return handle_not_found_error(e)
+#     except Exception as e:
+#         return handle_generic_error(e)
+
+# # Endpoint para borrar un usuario
+# @main.route('/users/<int:user_id>', methods=['DELETE'])
+# @limiter.limit("2 per minute") 
+# @jwt_required_middleware(role="admin")
+# def delete_user_route(user_id):
+#     if not delete_user(user_id):
+
+#         return jsonify({"code": "404", "message": "Usuario no encontrado r"}), 404
+    
+#     return jsonify({"code": "200", "message": "Usuario eliminado exitosamente"}), 200
+
+# @main.route('/orders', methods=['GET'])
+# @limiter.limit("2 per minute") 
+# @jwt_required_middleware(location=['headers'], role="admin")
+# def get_orders():
+#     try:
+#         orders = get_orders_from_mongo(mongo)
+#         return jsonify({    
+#             "code": "200",
+#             "len": len(orders),
+#             "message": "Orders obtenidas exitosamente",
+#             "data": orders
+#         }), 200
+#     except Exception as e:
+#         return handle_generic_error(e)

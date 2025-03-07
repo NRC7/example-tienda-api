@@ -1,12 +1,11 @@
 import os
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager
 from flask_pymongo import PyMongo
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-import redis
 from datetime import timedelta
 
 
@@ -14,13 +13,14 @@ from datetime import timedelta
 load_dotenv()
 
 # Conectar con Redis
-redis_host = "redis" if os.getenv("FLASK_ENV") == "production" else "localhost"
-redis_client = redis.Redis(host="redis", port=6379, db=0)
+redis_host = os.getenv("REDIS_STORAGE_URI") if os.getenv("FLASK_ENV") == "production" else "memory://"
+# redis_client = redis.Redis(host="redis", port=6379, db=0)
 
 # Configuraion inicial Flask-Limiter (máximo de solicitudes por minuto por IP)
 # Usa la IP del cliente para rate limiting,
 # Indica que se usará Redis como backend
-limiter = Limiter(key_func=get_remote_address, storage_uri=os.getenv("REDIS_STORAGE_URI"))
+# print(os.getenv("REDIS_STORAGE_URI"))redis_host
+limiter = Limiter(key_func=get_remote_address, storage_uri=redis_host,  strategy="moving-window",)
 
 # Configuración de MongoDB
 mongo = PyMongo()
@@ -30,8 +30,9 @@ def create_app():
 
     # Permitir solicitudes desde el origen de tu frontend (React)
     # CORS(app, resources={r"/*": {"origins": "http://localhost:5000"}})
-    app.config["CORS_ORIGINS"] = ["http://localhost:5000", "http://localhost:3000", "http://172.18.0.2:5000/"]  
-    CORS(app)
+    if os.getenv("FLASK_ENV") == "development":
+        app.config["CORS_ORIGINS"] = ["http://localhost:5000", "http://localhost:3000", "http://172.18.0.2:5000/"]  
+        CORS(app)
 
     # Inicializar Flask-Limiter con la aplicación
     limiter.init_app(app)
@@ -52,6 +53,11 @@ def create_app():
 
     # Inicializar extensiones jwt        
     jwt = JWTManager(app)
+
+    # Configura un manejador para el error 429 (Too Many Requests)
+    @app.errorhandler(429)
+    def ratelimit_error(error):
+        return jsonify({"code": "429","message": "Too many requests, please try again later."}), 429
 
     # Registrar Blueprints
     from .routes import main

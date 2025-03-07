@@ -1,9 +1,14 @@
-from .services import serialize_mongo_document, validate_product_data, validate_user_data, validate_and_filter_update_data
+from .services import (serialize_mongo_document, validate_product_data,
+    validate_user_data, validate_update_order_status_data,
+    validate_checkout_data, validate_and_filter_update_data)
 from flask_pymongo import PyMongo
 from bson.objectid import ObjectId
+from handlers.mongo_error_handler import ErrorHandlerMongo
+from datetime import datetime
 
+## CRUD APP ##
 
-# Consultar productos desde MongoDB
+# Obtener productos
 def get_products_from_mongo(mongo: PyMongo):
     products = mongo.db.products.find({"isActive": "true"})
     return [
@@ -26,7 +31,7 @@ def get_products_from_mongo(mongo: PyMongo):
         for product in products
     ]
 
-# Consultar imagenes del banner desde MongoDB
+# Obtener imagenes del banner
 def get_banner_images_from_mongo(mongo: PyMongo):
     banner_images = mongo.db.bannerImages.find()
     return [
@@ -37,86 +42,99 @@ def get_banner_images_from_mongo(mongo: PyMongo):
         for image in banner_images
     ]
 
-# Crear un producto
-def create_product(mongo: PyMongo, product_data: dict):
+# Crear pedido
+def create_checkout(mongo: PyMongo, checkout_data: dict):
     try:
         # Validar que todos los campos obligatorios estén presentes
-        validate_product_data(product_data)
+        validate_checkout_data(checkout_data)
 
-        # Calcular el próximo id como el total actual de documentos + 1
-        next_id = str(mongo.db.products.count_documents({}) + 1)
-
-        # Asignar el nuevo `id` al producto
-        product_data["sku"] = next_id
-        result = mongo.db.products.insert_one(product_data)
+        result = mongo.db.orders.insert_one(checkout_data)
 
         # Obtener y serializar el documento recién creado
         return serialize_mongo_document(
-            mongo.db.products.find_one({"_id": result.inserted_id})
+            mongo.db.orders.find_one({"_id": result.inserted_id})
         )
-    except ValueError as e:
-        # Manejar errores de validación
-        raise Exception(f"Error de validación: {e}")
     except Exception as e:
-        raise Exception(f"Error al crear el producto: {e}")
-
-
-# Obtener un producto por su SKU
-def get_product_by_sku(mongo: PyMongo, product_sku: str):
-    try:
-        #product = mongo.db.products.find_one({"sku": product_sku})
-        return serialize_mongo_document(mongo.db.products.find_one({"sku": product_sku}))
-    except Exception as e:
-        raise Exception(f"Error al obtener el producto: {e}")
+        return ErrorHandlerMongo.handleDBError(e)
     
-# Obtener todos los productos de una categoria
-def get_products_by_category(mongo: PyMongo, product_category: str):
+# Actualizar status del pedido
+def update_order_status(mongo: PyMongo, update_data: dict):
     try:
-        products = [product for product in get_products_from_mongo(mongo) if product["category"] == product_category]
-        return products
-    except Exception as e:
-        raise Exception(f"Error al obtener productos por categoria: {e}")
-
-# Obtener todos los productos de una sub categoria
-def get_products_by_subCategory(mongo: PyMongo, product_category: str, product_subCategory: str):
-    try:
-        products = [product for product in get_products_by_category(mongo, product_category) if product["subCategory"] == product_subCategory]
-        return products
-    except Exception as e:
-        raise Exception(f"Error al obtener productos por subCategoria: {e}")         
-
-
-# Actualizar un producto por su SKU
-def update_product(mongo: PyMongo, product_sku: str, update_data: dict):
-    try:
-        # Validar y filtrar los datos antes de la actualización
-        filtered_data = validate_and_filter_update_data(update_data)
-        # Realizar la actualización con los datos filtrados
-        result = mongo.db.products.update_one({"sku": product_sku}, {"$set": filtered_data})
-        if result.matched_count == 0:
+        validation = validate_update_order_status_data(update_data)
+        if validation:
+            return validation.get_json()
+        
+        order_id = update_data.get("order_id")
+        
+        found_order = mongo.db.orders.find_one({"_id": ObjectId(order_id)})
+    
+        if not found_order:
             return None
-        return serialize_mongo_document(
-            mongo.db.products.find_one({"sku": product_sku})
-        )
+    
+        found_order["status"] = update_data.get("update_status")
+        found_order["lastStatusModificationDate"] = datetime.today()
+
+        result = mongo.db.orders.update_one({"_id": ObjectId(order_id)}, {"$set": found_order})
+
+        if result.modified_count > 0:
+            return serialize_mongo_document(
+                mongo.db.orders.find_one({"_id": ObjectId(order_id)})
+            )
+        
     except Exception as e:
-        raise Exception(f"Error al actualizar el producto: {e}")
+        return ErrorHandlerMongo.handleDBError(e)    
 
+# Obtener todos los pedidos de un user
+def get_orders_by_user(mongo: PyMongo, id: str):
+    user = get_user_by_id(mongo, id)
+    orders = mongo.db.orders.find({"user": user.get("_id")})
+    return [
+        {
+            "address": order.get("address"),
+            "deliveryDate": order.get("deliveryDate"),
+            "email": order.get("email"),
+            "couponFactor": order.get("couponFactor"),
+            "couponAmount": order.get("couponAmount"),
+            "paymentMethod": order.get("paymentMethod"),
+            "cartProducts": [
+                {**product, "_id": str(product["_id"])}
+                for product in order.get("cartProducts", [])
+            ],
+            "subTotalAmount": order.get("subTotalAmount"),
+            "shippingCost": order.get("shippingCost"),
+            "totalAmount": order.get("totalAmount"),
+            "totalWithDiscountAmount": order.get("totalWithDiscountAmount"),
+            "user": order.get("user"),
+            "trxDate": order.get("trxDate"),
+        }
+        for order in orders
+    ]
 
-# Eliminar un producto por su ID
-def deactivate_product(mongo: PyMongo, product_sku: str):
-    try:
-        # Buscar y desactivar el producto por el campo "sku", no "_id"
-        result = mongo.db.products.update_one({"sku": product_sku}, {"$set": {"isActive": "false"}})
-        if result.matched_count == 0:
-            return None
-        return serialize_mongo_document(
-            mongo.db.products.find_one({"sku": product_sku})
-        )
-    except Exception as e:
-        raise Exception(f"Error al desactivar el producto: {e}")
+# Obteners todos los pedidos
+def get_orders_from_mongo(mongo: PyMongo):
+    orders = mongo.db.orders.find()
+    return [
+        {
+            "address": order.get("address"),
+            "deliveryDate": order.get("deliveryDate"),
+            "email": order.get("email"),
+            "couponFactor": order.get("couponFactor"),
+            "couponAmount": order.get("couponAmount"),
+            "paymentMethod": order.get("paymentMethod"),
+            "cartProducts": [
+                {**product, "_id": str(product["_id"])}
+                for product in order.get("cartProducts", [])
+            ],
+            "subTotalAmount": order.get("subTotalAmount"),
+            "shippingCost": order.get("shippingCost"),
+            "totalAmount": order.get("totalAmount"),
+            "totalWithDiscountAmount": order.get("totalWithDiscountAmount"),
+            "user": order.get("user"),
+            "trxDate": order.get("trxDate"),
+        }
+        for order in orders
+    ]
 
-
-## CRUD PARA USER ##
 # Registrar un usuario
 def register_user(mongo: PyMongo, name: str, email: str, hashed_password: str, role: str):
     try:
@@ -138,43 +156,130 @@ def register_user(mongo: PyMongo, name: str, email: str, hashed_password: str, r
             mongo.db.users.find_one({"_id": result.inserted_id})
         )
     except ValueError as e:
-        # Manejar errores de validación
-        raise Exception(f"Error de validación: {e}")
-    except Exception as e:
-        raise Exception(f"Error al crear el producto: {e}")
+        return ErrorHandlerMongo.handleDBError(e)
 
-
-# Obtener un usuario por username
-def get_user_by_username(mongo: PyMongo, userName: str):
+# Actualizar user
+def update_user(mongo: PyMongo, update_data: dict):
     try:
-        #product = mongo.db.products.find_one({"sku": product_sku})
-        return serialize_mongo_document(mongo.db.users.find_one({"userName": userName}))
-    except Exception as e:
-        raise Exception(f"Error al obtener el user: {e}")
+        data_id = update_data.get("_id")
+        update_data.pop("_id")
 
-# Obtener un usuario por _id
+        validate_user_data(update_data)
+
+        result = mongo.db.users.update_one({"_id": ObjectId(data_id)}, {"$set": update_data})
+        # print(result.modified_count)
+        if result.modified_count > 0:
+            return serialize_mongo_document(
+                mongo.db.users.find_one({"_id": ObjectId(data_id)})
+            )
+    except Exception as e:
+        return ErrorHandlerMongo.handleDBError(e)
+
+# Obtener un user
 def get_user_by_id(mongo: PyMongo, _id: str):
     try:
         #product = mongo.db.products.find_one({"sku": product_sku})
         return serialize_mongo_document(mongo.db.users.find_one({"_id": ObjectId(_id)}))
     except Exception as e:
-        raise Exception(f"Error al obtener el user: {e}")    
+        return ErrorHandlerMongo.handleDBError(e)
     
+# Obtener todos los user
+def get_users(mongo: PyMongo):
+    users = mongo.db.users.find()
+    return [
+        {
+            "_id": str(user["_id"]),
+            "userName": user.get("userName"),
+            "email": user.get("email"),
+            "password": user.get("password"),
+            "role": user.get("role")
+        }
+        for user in users
+    ]
 
-# Obtener todos los usuarios con batch fetching
-def get_users():
-    return True
+# Obtener un usuario
+def get_user_by_email(mongo: PyMongo, email: str):
+    try:
+        #product = mongo.db.products.find_one({"sku": product_sku})
+        return serialize_mongo_document(mongo.db.users.find_one({"email": email}))
+    except Exception as e:
+        return ErrorHandlerMongo.handleDBError(e)
+
+# Desactivar un producto
+def deactivate_product(mongo: PyMongo, product_sku: str):
+    try:
+        # Buscar y desactivar el producto por el campo "sku", no "_id"
+        result = mongo.db.products.update_one({"sku": product_sku}, {"$set": {"isActive": "false"}})
+        if result.matched_count == 0:
+            return None
+        return serialize_mongo_document(
+            mongo.db.products.find_one({"sku": product_sku})
+        )
+    except Exception as e:
+        return ErrorHandlerMongo.handleDBError(e)
 
 
-# Actualizar un usuario
-def update_user(user_id, new_data):
-    user = user_id
-    if not user:
-        return None
-    for key, value in new_data.items():
-        setattr(user, key, value)
-    return user
 
+## CRUD ADMIN ##
+
+# Crear un producto
+def create_product(mongo: PyMongo, product_data: dict):
+    try:
+        # Validar que todos los campos obligatorios estén presentes
+        validate_product_data(product_data)
+
+        # Calcular el próximo id como el total actual de documentos + 1
+        next_id = str(mongo.db.products.count_documents({}) + 1)
+
+        # Asignar el nuevo `id` al producto
+        product_data["sku"] = next_id
+        result = mongo.db.products.insert_one(product_data)
+
+        # Obtener y serializar el documento recién creado
+        return serialize_mongo_document(
+            mongo.db.products.find_one({"_id": result.inserted_id})
+        )
+    except ValueError as e:
+        return ErrorHandlerMongo.handleDBError(e)
+
+# Obtener un producto por su SKU
+def get_product_by_sku(mongo: PyMongo, product_sku: str):
+    try:
+        #product = mongo.db.products.find_one({"sku": product_sku})
+        return serialize_mongo_document(mongo.db.products.find_one({"sku": product_sku}))
+    except Exception as e:
+        return ErrorHandlerMongo.handleDBError(e)
+    
+# Obtener todos los productos de una categoria
+def get_products_by_category(mongo: PyMongo, product_category: str):
+    try:
+        products = [product for product in get_products_from_mongo(mongo) if product["category"] == product_category]
+        return products
+    except Exception as e:
+        return ErrorHandlerMongo.handleDBError(e)
+
+# Obtener todos los productos de una sub categoria
+def get_products_by_subCategory(mongo: PyMongo, product_category: str, product_subCategory: str):
+    try:
+        products = [product for product in get_products_by_category(mongo, product_category) if product["subCategory"] == product_subCategory]
+        return products
+    except Exception as e:
+        return ErrorHandlerMongo.handleDBError(e)    
+
+# Actualizar un producto por su SKU
+def update_product(mongo: PyMongo, product_sku: str, update_data: dict):
+    try:
+        # Validar y filtrar los datos antes de la actualización
+        filtered_data = validate_and_filter_update_data(update_data)
+        # Realizar la actualización con los datos filtrados
+        result = mongo.db.products.update_one({"sku": product_sku}, {"$set": filtered_data})
+        if result.matched_count == 0:
+            return None
+        return serialize_mongo_document(
+            mongo.db.products.find_one({"sku": product_sku})
+        )
+    except Exception as e:
+        return ErrorHandlerMongo.handleDBError(e)
 
 # Borrar un usuario
 def delete_user(user_id):

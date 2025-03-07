@@ -1,7 +1,6 @@
-
+from handlers.services_error_handler import ErrorHandlerServices
 
 def serialize_mongo_document(document):
-    """Convierte todos los ObjectId de un documento MongoDB a cadenas JSON serializables."""
     if not document:
         return None
     document["_id"] = str(document["_id"]) if "_id" in document else None
@@ -9,7 +8,6 @@ def serialize_mongo_document(document):
 
 
 def validate_product_data(product_data: dict):
-    """Valida que todos los campos requeridos estén presentes en el producto."""
     required_fields = [
         "name",
         "category",
@@ -27,25 +25,57 @@ def validate_product_data(product_data: dict):
     missing_fields = [field for field in required_fields if field not in product_data]
     
     if missing_fields:
-        raise ValueError(f"Faltan los siguientes campos obligatorios: {', '.join(missing_fields)}")
+        return ErrorHandlerServices.missing_requeried_fields_error(f"{'s:, '.join(missing_fields)}")
     
 def validate_user_data(user_data: dict):
-    """Valida que todos los campos requeridos estén presentes en el producto."""
     required_fields = [
-        "userName",
         "email",
         "password",
-        "role"
+        "role",
+        "userName"
     ]
     missing_fields = [field for field in required_fields if field not in user_data]
     
     if missing_fields:
-        raise ValueError(f"Faltan los siguientes campos obligatorios: {', '.join(missing_fields)}")    
+        return ErrorHandlerServices.missing_requeried_fields_error(f"{'s:, '.join(missing_fields)}")
+    
+def validate_checkout_data(checkout_data: dict):
+    required_fields = [
+        "address",
+        "deliveryDate",
+        "email",
+        "couponFactor",
+        "couponAmount",
+        "paymentMethod",
+        "cartProducts",
+        "subTotalAmount",
+        "shippingCost",
+        "totalAmount",
+        "totalWithDiscountAmount",
+        "user",
+        "trxDate" ,
+        "status",
+        "lastStatusModificationDate"
+    ]
+    missing_fields = [field for field in required_fields if field not in checkout_data]
+    
+    if missing_fields:
+        return ErrorHandlerServices.missing_requeried_fields_error(f"{'s:, '.join(missing_fields)}")
+
+def validate_update_order_status_data(update_order_data: dict):
+    required_fields = [
+        "order_id",
+        "update_status"
+    ]
+    missing_fields = [field for field in required_fields if field not in update_order_data]
+    
+    if missing_fields:
+        return ErrorHandlerServices.missing_requeried_fields_error(f"{'s:, '.join(missing_fields)}")
+        
 
 def validate_and_filter_update_data(update_data: dict):
-    """Filtra los campos permitidos para la actualización."""
     if not update_data:
-        raise ValueError("No se proporcionaron datos para actualizar")
+        return ErrorHandlerServices.missing_requeried_fields_error("s: No data provided to update")
     
     # Filtrar solo los campos válidos
     required_fields = [
@@ -65,6 +95,6 @@ def validate_and_filter_update_data(update_data: dict):
     filtered_data = {key: value for key, value in update_data.items() if key in required_fields}
     
     if not filtered_data:
-        raise ValueError("Ningún campo válido proporcionado para la actualización")
+        return ErrorHandlerServices.missing_requeried_fields_error("s: Not enough data provided to update")
     
     return filtered_data
