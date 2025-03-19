@@ -49,7 +49,7 @@ def create_app():
         return jsonify({"code": "429", "message": "Too many requests, please try again later."}), 429
 
     # Registrar Blueprints
-    from routes import main
+    from .routes import main
     app.register_blueprint(main)
 
     return app
