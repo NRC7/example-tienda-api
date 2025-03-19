@@ -20,7 +20,7 @@ main = Blueprint('main', __name__)
 ## RUTAS APP ##
 
 # Endpoint para obtener todos los productos
-@main.route('api/v1/products', methods=['GET'])
+@main.route('/api/v1/products', methods=['GET'])
 @limiter.limit("2 per minute")  
 def get_products():
     try:
@@ -35,7 +35,7 @@ def get_products():
         return ErrorHandler.internal_server_error(f"Error fetching products r: {str(e)}")
 
 # Obtener listado de imagenes
-@main.route('api/v1/banner_images', methods=['GET'])
+@main.route('/api/v1/banner_images', methods=['GET'])
 @limiter.limit("2 per minute")  
 def get_banner_images_route():
     try:
@@ -49,7 +49,7 @@ def get_banner_images_route():
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error fetching images r: {str(e)}")
 
-@main.route('api/v1/categories', methods=['GET'])
+@main.route('/api/v1/categories', methods=['GET'])
 @limiter.limit("2 per minute")  
 def get_categories():
     try:
@@ -64,7 +64,7 @@ def get_categories():
         return ErrorHandler.internal_server_error(f"Error fetching products r: {str(e)}")
 
 # Endpoint para registrar usuarios
-@main.route('api/v1/register', methods=['POST'])
+@main.route('/api/v1/register', methods=['POST'])
 @limiter.limit("2 per minute")  
 def register():
     try:
@@ -90,7 +90,7 @@ def register():
         return ErrorHandler.internal_server_error(f"error when registering user r: {str(e)}")
 
 # Endpoint para login
-@main.route('api/v1/login', methods=['POST'])
+@main.route('/api/v1/login', methods=['POST'])
 @limiter.limit("3 per 2 minute") 
 def login():
     try:
@@ -143,7 +143,7 @@ def login():
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error during authentication r: {str(e)}")
 
-@main.route("api/v1/logout", methods=["POST"])
+@main.route("/api/v1/logout", methods=["POST"])
 @jwt_required_middleware(location=['headers'])
 def logout():
     try:
@@ -167,7 +167,7 @@ def logout():
         return ErrorHandler.internal_server_error(f"Error procesing logout r: {str(e)}")
 
 # Endpoint para generar nuevo token de acceso
-@main.route("api/v1/refresh", methods=["POST"])
+@main.route("/api/v1/refresh", methods=["POST"])
 @limiter.limit("2 per 5 minute")  
 @jwt_required_middleware(refresh=True, location=['cookies'])
 def refresh():
@@ -183,7 +183,7 @@ def refresh():
         return ErrorHandler.internal_server_error(f"Error when refresing r: {str(e)}")
     
 # Actualizar un usuario
-@main.route('api/v1/user/edit', methods=['PUT'])
+@main.route('/api/v1/user/edit', methods=['PUT'])
 @limiter.limit("2 per 5 minute")  
 @jwt_required_middleware(location=['headers'], role="user")
 def update_user_route():
@@ -205,7 +205,7 @@ def update_user_route():
         return ErrorHandler.internal_server_error(f"Error during updating user r: {str(e)}")
     
 # Actualizar un data de un user
-@main.route('api/v1/user/data', methods=['PUT'])
+@main.route('/api/v1/user/data', methods=['PUT'])
 @limiter.limit("2 per 5 minute")  
 @jwt_required_middleware(location=['headers'], role="user")
 def update_user_data_route():
@@ -250,7 +250,7 @@ def update_user_data_route():
 #         return ErrorHandler.internal_server_error(f"Error fetching users r: {str(e)}")
 
 # Endpoint para procesar el checkout
-@main.route('api/v1/checkout', methods=['POST'])
+@main.route('/api/v1/checkout', methods=['POST'])
 @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="user")
 def checkout():
@@ -298,7 +298,7 @@ def checkout():
 #     except Exception as e:
 #         return ErrorHandler.internal_server_error(f"Error during updating order status r: {str(e)}")    
     
-@main.route('api/v1/orders/user', methods=['GET'])
+@main.route('/api/v1/orders/user', methods=['GET'])
 @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'])
 def get_orders_by_user_route():
