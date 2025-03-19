@@ -12,7 +12,7 @@ from middlewares.middlewares import jwt_required_middleware
 from app import mongo, limiter
 from handlers.error_handler import ErrorHandler
 from datetime import datetime
-import requests
+
 
 main = Blueprint('main', __name__)
 
@@ -20,8 +20,8 @@ main = Blueprint('main', __name__)
 ## RUTAS APP ##
 
 # Endpoint para obtener todos los productos
-@main.route('/products', methods=['GET'])
-# @limiter.limit("2 per minute")  
+@main.route('api/v1/products', methods=['GET'])
+@limiter.limit("2 per minute")  
 def get_products():
     try:
         product_list = get_products_from_mongo(mongo)
@@ -35,8 +35,8 @@ def get_products():
         return ErrorHandler.internal_server_error(f"Error fetching products r: {str(e)}")
 
 # Obtener listado de imagenes
-@main.route('/banner_images', methods=['GET'])
-# @limiter.limit("2 per minute")  
+@main.route('api/v1/banner_images', methods=['GET'])
+@limiter.limit("2 per minute")  
 def get_banner_images_route():
     try:
         banner_images_list = get_banner_images_from_mongo(mongo)
@@ -49,8 +49,8 @@ def get_banner_images_route():
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error fetching images r: {str(e)}")
 
-@main.route('/categories', methods=['GET'])
-# @limiter.limit("2 per minute")  
+@main.route('api/v1/categories', methods=['GET'])
+@limiter.limit("2 per minute")  
 def get_categories():
     try:
         categories = get_categories_from_mongo(mongo)
@@ -64,8 +64,8 @@ def get_categories():
         return ErrorHandler.internal_server_error(f"Error fetching products r: {str(e)}")
 
 # Endpoint para registrar usuarios
-@main.route('/register', methods=['POST'])
-# @limiter.limit("2 per minute")  
+@main.route('api/v1/register', methods=['POST'])
+@limiter.limit("2 per minute")  
 def register():
     try:
         data = request.get_json()
@@ -90,8 +90,8 @@ def register():
         return ErrorHandler.internal_server_error(f"error when registering user r: {str(e)}")
 
 # Endpoint para login
-@main.route('/login', methods=['POST'])
-# @limiter.limit("3 per 2 minute") 
+@main.route('api/v1/login', methods=['POST'])
+@limiter.limit("3 per 2 minute") 
 def login():
     try:
         data = request.get_json()
@@ -143,8 +143,8 @@ def login():
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error during authentication r: {str(e)}")
 
-@main.route("/logout", methods=["POST"])
-# @jwt_required_middleware(location=['headers'])
+@main.route("api/v1/logout", methods=["POST"])
+@jwt_required_middleware(location=['headers'])
 def logout():
     try:
         response = make_response(
@@ -167,8 +167,8 @@ def logout():
         return ErrorHandler.internal_server_error(f"Error procesing logout r: {str(e)}")
 
 # Endpoint para generar nuevo token de acceso
-@main.route("/refresh", methods=["POST"])
-# @limiter.limit("2 per 5 minute")  
+@main.route("api/v1/refresh", methods=["POST"])
+@limiter.limit("2 per 5 minute")  
 @jwt_required_middleware(refresh=True, location=['cookies'])
 def refresh():
     try:
@@ -183,8 +183,8 @@ def refresh():
         return ErrorHandler.internal_server_error(f"Error when refresing r: {str(e)}")
     
 # Actualizar un usuario
-@main.route('/user/edit', methods=['PUT'])
-# @limiter.limit("2 per 5 minute")  
+@main.route('api/v1/user/edit', methods=['PUT'])
+@limiter.limit("2 per 5 minute")  
 @jwt_required_middleware(location=['headers'], role="user")
 def update_user_route():
     try:
@@ -205,8 +205,8 @@ def update_user_route():
         return ErrorHandler.internal_server_error(f"Error during updating user r: {str(e)}")
     
 # Actualizar un data de un user
-@main.route('/user/data', methods=['PUT'])
-# @limiter.limit("2 per 5 minute")  
+@main.route('api/v1/user/data', methods=['PUT'])
+@limiter.limit("2 per 5 minute")  
 @jwt_required_middleware(location=['headers'], role="user")
 def update_user_data_route():
     try:
@@ -232,26 +232,26 @@ def update_user_data_route():
         return ErrorHandler.internal_server_error(f"Error during updating user data r: {str(e)}")    
     
 # Endpoint para obtener lista de usuarios
-@main.route('/users', methods=['GET'])
-@limiter.limit("2 per minute") 
+# @main.route('/users', methods=['GET'])
+# @limiter.limit("2 per minute") 
 # @jwt_required_middleware(role="admin")
-@jwt_required_middleware(location=['headers'])
-def get_users_route():
-    try:
-        user_list = get_users(mongo)
-        return jsonify({
-            "code": "200",
-            "len": len(user_list),
-            "message": "Fetch users successfully",
-            "data": user_list
-        }), 200
+# @jwt_required_middleware(location=['headers'])
+# def get_users_route():
+#     try:
+#         user_list = get_users(mongo)
+#         return jsonify({
+#             "code": "200",
+#             "len": len(user_list),
+#             "message": "Fetch users successfully",
+#             "data": user_list
+#         }), 200
 
-    except Exception as e:
-        return ErrorHandler.internal_server_error(f"Error fetching users r: {str(e)}")
+#     except Exception as e:
+#         return ErrorHandler.internal_server_error(f"Error fetching users r: {str(e)}")
 
 # Endpoint para procesar el checkout
-@main.route('/checkout', methods=['POST'])
-# @limiter.limit("2 per minute") 
+@main.route('api/v1/checkout', methods=['POST'])
+@limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="user")
 def checkout():
     try:
@@ -276,30 +276,30 @@ def checkout():
         return ErrorHandler.internal_server_error(f"Error procesing order r: {str(e)}")
     
 # Actualizar estado del pedido
-@main.route('/order/status/edit', methods=['PUT'])
+# @main.route('/order/status/edit', methods=['PUT'])
 # @limiter.limit("2 per 5 minute")  
-@jwt_required_middleware(location=['headers'])
-def update_order_status_route():
-    try:
-        update_data = request.get_json()
-        if not update_data:
-            return ErrorHandler.bad_request_error("Missing fields r")
+# @jwt_required_middleware(location=['headers'])
+# def update_order_status_route():
+#     try:
+#         update_data = request.get_json()
+#         if not update_data:
+#             return ErrorHandler.bad_request_error("Missing fields r")
         
-        updated_order = update_order_status(mongo, update_data)
-        if not updated_order:
-            return ErrorHandler.not_found_error("Updated order not found r")
-        elif not hasattr(updated_order, 'code'):
-            # print(updated_order)
-            code = updated_order["code"]
-            message = updated_order["message"]
-            return ErrorHandler.bad_request_error(f"{code} {message} r")
+#         updated_order = update_order_status(mongo, update_data)
+#         if not updated_order:
+#             return ErrorHandler.not_found_error("Updated order not found r")
+#         elif not hasattr(updated_order, 'code'):
+#             # print(updated_order)
+#             code = updated_order["code"]
+#             message = updated_order["message"]
+#             return ErrorHandler.bad_request_error(f"{code} {message} r")
 
-        return jsonify({"code": "200", "message": "Order status updated successfully", "data": updated_order}), 200
-    except Exception as e:
-        return ErrorHandler.internal_server_error(f"Error during updating order status r: {str(e)}")    
+#         return jsonify({"code": "200", "message": "Order status updated successfully", "data": updated_order}), 200
+#     except Exception as e:
+#         return ErrorHandler.internal_server_error(f"Error during updating order status r: {str(e)}")    
     
-@main.route('/orders/user', methods=['GET'])
-# @limiter.limit("2 per minute") 
+@main.route('api/v1/orders/user', methods=['GET'])
+@limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'])
 def get_orders_by_user_route():
     try:
@@ -314,13 +314,14 @@ def get_orders_by_user_route():
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error fetching orders r: {str(e)}")
 
-@main.route("/server-ip", methods=["GET"])
-def get_server_ip():
-    try:
-        ip = requests.get("https://ifconfig.me").text
-        return jsonify({"server_ip": ip})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+# import requests
+# @main.route("/server-ip", methods=["GET"])
+# def get_server_ip():
+#     try:
+#         ip = requests.get("https://ifconfig.me").text
+#         return jsonify({"server_ip": ip})
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
 
 ## RUTAS ADMIN ##
 
