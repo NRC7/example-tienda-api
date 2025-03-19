@@ -49,3 +49,9 @@ collections/
 localhost-cert.pem
 #
 localhost-key.pem
+
+#
+.gitignore
+docker-compose.yml
+Dockerfile
+.dockerignore
