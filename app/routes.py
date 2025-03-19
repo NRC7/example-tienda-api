@@ -12,7 +12,7 @@ from middlewares.middlewares import jwt_required_middleware
 from app import mongo, limiter
 from handlers.error_handler import ErrorHandler
 from datetime import datetime
-
+import requests
 
 main = Blueprint('main', __name__)
 
@@ -314,7 +314,13 @@ def get_orders_by_user_route():
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error fetching orders r: {str(e)}")
 
-
+@main.route("/server-ip", methods=["GET"])
+def get_server_ip():
+    try:
+        ip = requests.get("https://ifconfig.me").text
+        return jsonify({"server_ip": ip})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 ## RUTAS ADMIN ##
 
