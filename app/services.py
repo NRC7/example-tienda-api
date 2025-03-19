@@ -32,7 +32,9 @@ def validate_user_data(user_data: dict):
         "email",
         "password",
         "role",
-        "userName"
+        "userName",
+        "address",
+        "dateOfBirth"
     ]
     missing_fields = [field for field in required_fields if field not in user_data]
     

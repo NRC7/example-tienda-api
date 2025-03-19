@@ -39,6 +39,13 @@ class ErrorHandler:
         }), 404
     
     @staticmethod
+    def expired_signature_error(message):
+        return jsonify({
+            "code": "405",
+            "message": f"Signature has expired: {message}"
+        }), 404
+    
+    @staticmethod
     def not_acceptable_error(message):
         return jsonify({
             "code": "406",

@@ -2,7 +2,7 @@ import os
 from flask import Blueprint, request, jsonify, make_response
 from .crud import (
     get_users, update_user, delete_user, register_user, get_user_by_email, update_order_status,
-    get_products_from_mongo, deactivate_product, update_product, get_product_by_sku,
+    get_products_from_mongo, deactivate_product, update_product, get_product_by_sku, get_categories_from_mongo,
     create_product, get_products_by_category, get_products_by_subCategory, get_user_by_id,
     get_banner_images_from_mongo, create_checkout, get_orders_from_mongo, get_orders_by_user, update_user
 )
@@ -21,7 +21,7 @@ main = Blueprint('main', __name__)
 
 # Endpoint para obtener todos los productos
 @main.route('/products', methods=['GET'])
-@limiter.limit("2 per minute")  
+# @limiter.limit("2 per minute")  
 def get_products():
     try:
         product_list = get_products_from_mongo(mongo)
@@ -36,7 +36,7 @@ def get_products():
 
 # Obtener listado de imagenes
 @main.route('/banner_images', methods=['GET'])
-@limiter.limit("2 per minute")  
+# @limiter.limit("2 per minute")  
 def get_banner_images_route():
     try:
         banner_images_list = get_banner_images_from_mongo(mongo)
@@ -49,26 +49,41 @@ def get_banner_images_route():
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error fetching images r: {str(e)}")
 
+@main.route('/categories', methods=['GET'])
+# @limiter.limit("2 per minute")  
+def get_categories():
+    try:
+        categories = get_categories_from_mongo(mongo)
+        return jsonify({
+            "code": "200",
+            "len": len(categories),
+            "message": "Fetch categories successfully",
+            "data": categories
+        }), 200
+    except Exception as e:
+        return ErrorHandler.internal_server_error(f"Error fetching products r: {str(e)}")
+
 # Endpoint para registrar usuarios
-@limiter.limit("2 per minute")  
 @main.route('/register', methods=['POST'])
+# @limiter.limit("2 per minute")  
 def register():
     try:
         data = request.get_json()
         name = data.get('user_name')
         email = data.get('email')
-        #password = data.get('password')
-        hashed_password = generate_password_hash(data.get('password')) 
+        address = data.get('address')
+        dateOfBirth = data.get('dateOfBirth')
+        hashed_info = generate_password_hash(data.get('info')) 
         role = 'user'
 
-        if not all([name, email, hashed_password]):
+        if not all([name, email, address, dateOfBirth, hashed_info]):
             return ErrorHandler.bad_request_error("Missing required fields r")
         
         existingUser = get_user_by_email(mongo, email)
         if existingUser: 
             return ErrorHandler.not_acceptable_error("Email already exist r")    
-
-        user = register_user(mongo, name, email, hashed_password, role)
+        print(f'data: {data}')
+        user = register_user(mongo, name, email, address, dateOfBirth, hashed_info, role)
 
         return jsonify({"code": "201", "message": f"User registered successfully: {user.get('userName')}"}), 201
     except Exception as e:
@@ -76,23 +91,26 @@ def register():
 
 # Endpoint para login
 @main.route('/login', methods=['POST'])
-@limiter.limit("3 per 2 minute") 
+# @limiter.limit("3 per 2 minute") 
 def login():
     try:
         data = request.get_json()
         email = data.get('email')
-        password = data.get('password')
+        info = data.get('info')
 
-        if not all([email, password]):
+        if not all([email, info]):
             return ErrorHandler.bad_request_error("Missing required credentials r")
 
         user = get_user_by_email(mongo, email)
+
         if not isinstance(user, dict) or not user: 
             return ErrorHandler.not_found_error("User does not exist r")
         
-        if not check_password_hash(user.get('password'), password):
+        if not check_password_hash(user.get('password'), info):
             return ErrorHandler.invalid_credentials_error("r")
         
+        user.pop('password', None)
+
         access_token = create_access_token(identity=str(user.get('_id')), fresh=True)
         refresh_token = create_refresh_token(identity=str(user.get('_id')))
 
@@ -100,7 +118,14 @@ def login():
             jsonify({
                 "code": "200",
                 "message": "Login successful",
-                "access_token": access_token
+                "access_token": access_token,
+                "data": {
+                    "_id": user.get('_id'),
+                    "email": user.get('email'),
+                    "userName": user.get('userName'),
+                    "address": user.get('address'),
+                    "dateOfBirth": user.get('dateOfBirth')
+                }
             }),
             200
         )
@@ -111,16 +136,39 @@ def login():
             httponly=True, 
             secure=os.getenv("COOKIE_SECURE"),  # Si https True
             samesite='Lax',
-            max_age=1800  # Duración de la cookie (0.5 horas, por ejemplo)
+            max_age=86400  # Duración de la cookie (0.5 horas, por ejemplo)
         )
 
         return response
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error during authentication r: {str(e)}")
 
+@main.route("/logout", methods=["POST"])
+# @jwt_required_middleware(location=['headers'])
+def logout():
+    try:
+        response = make_response(
+                jsonify({
+                    "code": "200",
+                    "message": "Logout successful"
+                }),
+                200
+            )
+        response.set_cookie(
+            "refresh_token_cookie", 
+            "",  # Dejar la cookie vacía
+            httponly=True, 
+            secure=os.getenv("COOKIE_SECURE"),  # Si usas HTTPS
+            samesite="Lax", 
+            max_age=0  # Expirar la cookie inmediatamente
+        )
+        return response
+    except Exception as e:
+        return ErrorHandler.internal_server_error(f"Error procesing logout r: {str(e)}")
+
 # Endpoint para generar nuevo token de acceso
 @main.route("/refresh", methods=["POST"])
-@limiter.limit("2 per 5 minute")  
+# @limiter.limit("2 per 5 minute")  
 @jwt_required_middleware(refresh=True, location=['cookies'])
 def refresh():
     try:
@@ -134,9 +182,9 @@ def refresh():
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error when refresing r: {str(e)}")
     
-# Actualizar un producto
+# Actualizar un usuario
 @main.route('/user/edit', methods=['PUT'])
-@limiter.limit("2 per 5 minute")  
+# @limiter.limit("2 per 5 minute")  
 @jwt_required_middleware(location=['headers'], role="user")
 def update_user_route():
     try:
@@ -152,9 +200,36 @@ def update_user_route():
         if not updated_user:
             return ErrorHandler.not_found_error("User not found r")
 
-        return jsonify({"code": "200", "message": "User updated successfully", "data": updated_user}), 200
+        return jsonify({"code": "201", "message": "User updated successfully", "data": updated_user}), 201
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error during updating user r: {str(e)}")
+    
+# Actualizar un data de un user
+@main.route('/user/data', methods=['PUT'])
+# @limiter.limit("2 per 5 minute")  
+@jwt_required_middleware(location=['headers'], role="user")
+def update_user_data_route():
+    try:
+        update_data = request.get_json()
+        if not update_data:
+            return ErrorHandler.bad_request_error("Missing fields r")
+        
+        if get_jwt_identity() != str(update_data.get("_id")):
+            return ErrorHandler.conflict_error("Identities do not match r")
+        
+        hashed_info = generate_password_hash(update_data.get('info')) 
+
+        update_data.pop('info', None)
+        update_data["password"] = hashed_info
+        
+        updated_user = update_user(mongo, update_data)
+
+        if not updated_user:
+            return ErrorHandler.not_found_error("User not found r") 
+
+        return jsonify({"code": "201", "message": "User data updated successfully", "data": "ok"}), 201
+    except Exception as e:
+        return ErrorHandler.internal_server_error(f"Error during updating user data r: {str(e)}")    
     
 # Endpoint para obtener lista de usuarios
 @main.route('/users', methods=['GET'])
@@ -176,7 +251,7 @@ def get_users_route():
 
 # Endpoint para procesar el checkout
 @main.route('/checkout', methods=['POST'])
-@limiter.limit("2 per minute") 
+# @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="user")
 def checkout():
     try:
@@ -187,12 +262,15 @@ def checkout():
 
         if not get_user_by_id(mongo, get_jwt_identity()):
             return ErrorHandler.not_found_error("User not found r")
-         
-        checkout_data["user"] = get_jwt_identity()
+
+        checkout_data["trxDate"] = datetime.today()
         checkout_data["status"] = "pending"
         checkout_data["lastStatusModificationDate"] = datetime.today()
+        print(f'trxDate {checkout_data.get("trxDate")}')
+        print(f'lastStatusModificationDate {checkout_data.get("lastStatusModificationDate")}')
         new_checkout = create_checkout(mongo, checkout_data)
-
+        print(f'new_trxDate {new_checkout.get("trxDate")}')
+        print(f'new_lastStatusModificationDate {new_checkout.get("lastStatusModificationDate")}')
         return jsonify({"code": "201", "message": "Order created successfully", "data": new_checkout}), 201
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error procesing order r: {str(e)}")
@@ -221,7 +299,7 @@ def update_order_status_route():
         return ErrorHandler.internal_server_error(f"Error during updating order status r: {str(e)}")    
     
 @main.route('/orders/user', methods=['GET'])
-@limiter.limit("2 per minute") 
+# @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'])
 def get_orders_by_user_route():
     try:

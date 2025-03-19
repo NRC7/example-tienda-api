@@ -1,6 +1,7 @@
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity, jwt_required
 from functools import wraps
 from handlers.error_handler import ErrorHandler
+from jwt.exceptions import ExpiredSignatureError
 from app.crud import get_user_by_id
 from app import mongo
 
@@ -30,6 +31,8 @@ def jwt_required_middleware(role=None, refresh=False, location=None):
                     return ErrorHandler.forbidden_error("Access denied requires different role m")
 
                 return fn(*args, **kwargs)
+            except ExpiredSignatureError:
+                return ErrorHandler.expired_signature_error("Token has expired m")  # Retorna 401
             except Exception as e:
                 return ErrorHandler.internal_server_error(f"Error during verification m: {str(e)}")
         return decorated_function

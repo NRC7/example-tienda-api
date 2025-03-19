@@ -45,3 +45,6 @@ collections/
 
 # OS
 .DS_Store
+
+.localhost-cert.pem
+.localhost-key.prem

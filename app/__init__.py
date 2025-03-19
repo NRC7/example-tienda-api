@@ -31,8 +31,9 @@ def create_app():
     # Permitir solicitudes desde el origen de tu frontend (React)
     # CORS(app, resources={r"/*": {"origins": "http://localhost:5000"}})
     if os.getenv("FLASK_ENV") == "development":
-        app.config["CORS_ORIGINS"] = ["http://localhost:5000", "http://localhost:3000", "http://172.18.0.2:5000/"]  
-        CORS(app)
+        app.config["CORS_ORIGINS"] = ["https://localhost:5000", "https://localhost:3000", "https://172.18.0.2:5000/"]  
+        # CORS(app)
+        CORS(app, supports_credentials=True)
 
     # Inicializar Flask-Limiter con la aplicación
     limiter.init_app(app)

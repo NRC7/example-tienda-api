@@ -42,6 +42,18 @@ def get_banner_images_from_mongo(mongo: PyMongo):
         for image in banner_images
     ]
 
+# Obtener categorias drawer
+def get_categories_from_mongo(mongo: PyMongo):
+    categories = mongo.db.categories.find()
+    return [
+        {
+            "_id": str(category["_id"]),
+            "name": category.get("name"),
+            "subcategories": category.get("subcategories")
+        }
+        for category in categories
+    ]
+
 # Crear pedido
 def create_checkout(mongo: PyMongo, checkout_data: dict):
     try:
@@ -90,8 +102,9 @@ def get_orders_by_user(mongo: PyMongo, id: str):
     orders = mongo.db.orders.find({"user": user.get("_id")})
     return [
         {
+            "_id": str(order.get("_id")),
             "address": order.get("address"),
-            "deliveryDate": order.get("deliveryDate"),
+            "deliveryDate": str(order.get("deliveryDate")),
             "email": order.get("email"),
             "couponFactor": order.get("couponFactor"),
             "couponAmount": order.get("couponAmount"),
@@ -104,8 +117,10 @@ def get_orders_by_user(mongo: PyMongo, id: str):
             "shippingCost": order.get("shippingCost"),
             "totalAmount": order.get("totalAmount"),
             "totalWithDiscountAmount": order.get("totalWithDiscountAmount"),
+            "trxDate": str(order.get("trxDate")),
             "user": order.get("user"),
-            "trxDate": order.get("trxDate"),
+            "status": order.get("status"),
+            "lastStatusModificationDate": order.get("lastStatusModificationDate")
         }
         for order in orders
     ]
@@ -136,13 +151,15 @@ def get_orders_from_mongo(mongo: PyMongo):
     ]
 
 # Registrar un usuario
-def register_user(mongo: PyMongo, name: str, email: str, hashed_password: str, role: str):
+def register_user(mongo: PyMongo, name: str, email: str, address: str, dateOfBirth: str, hashed_info: str, role: str):
     try:
         # Crear dict para validacion
         user_data = {
         "userName": name,
         "email": email,
-        "password": hashed_password,
+        "address": address,
+        "dateOfBirth": dateOfBirth,
+        "password": hashed_info,
         "role": role,
         }
 
@@ -150,7 +167,7 @@ def register_user(mongo: PyMongo, name: str, email: str, hashed_password: str, r
         validate_user_data(user_data)
 
         result = mongo.db.users.insert_one(user_data)
-
+        
         # Obtener y serializar el documento recién creado
         return serialize_mongo_document(
             mongo.db.users.find_one({"_id": result.inserted_id})
@@ -191,7 +208,6 @@ def get_users(mongo: PyMongo):
             "_id": str(user["_id"]),
             "userName": user.get("userName"),
             "email": user.get("email"),
-            "password": user.get("password"),
             "role": user.get("role")
         }
         for user in users
