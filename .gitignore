@@ -55,3 +55,6 @@ localhost-key.pem
 docker-compose.yml
 Dockerfile
 .dockerignore
+
+tests/
+tests/test_routes.py

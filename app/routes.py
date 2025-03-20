@@ -21,7 +21,7 @@ main = Blueprint('main', __name__)
 
 # Endpoint para obtener todos los productos
 @main.route('/api/v1/products', methods=['GET'])
-@limiter.limit("2 per minute")  
+@limiter.limit("5 per minute")  
 def get_products():
     try:
         product_list = get_products_from_mongo(mongo)
@@ -36,7 +36,7 @@ def get_products():
 
 # Obtener listado de imagenes
 @main.route('/api/v1/banner_images', methods=['GET'])
-@limiter.limit("2 per minute")  
+@limiter.limit("5 per minute")  
 def get_banner_images_route():
     try:
         banner_images_list = get_banner_images_from_mongo(mongo)
@@ -50,7 +50,7 @@ def get_banner_images_route():
         return ErrorHandler.internal_server_error(f"Error fetching images r: {str(e)}")
 
 @main.route('/api/v1/categories', methods=['GET'])
-@limiter.limit("2 per minute")  
+@limiter.limit("5 per minute")  
 def get_categories():
     try:
         categories = get_categories_from_mongo(mongo)
