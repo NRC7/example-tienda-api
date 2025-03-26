@@ -1,4 +1,5 @@
 import os
+import time
 from dotenv import load_dotenv
 from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager
@@ -19,6 +20,10 @@ limiter = Limiter(key_func=get_remote_address, storage_uri=redis_host, strategy=
 
 # Configuración de MongoDB
 mongo = PyMongo()
+
+# Configura la zona horaria de Chile (se ejecuta al inicio del programa)
+os.environ['TZ'] = 'America/Santiago'  # Establece la zona horaria
+time.tzset()  # Aplica el cambio
 
 def create_app():
     app = Flask(__name__)
