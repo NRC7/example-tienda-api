@@ -5,9 +5,12 @@ from flask_pymongo import PyMongo
 from bson.objectid import ObjectId
 from handlers.mongo_error_handler import ErrorHandlerMongo
 from datetime import datetime
-
+from zoneinfo import ZoneInfo
 
 ## CRUD APP ##
+
+# Definir la zona horaria de Chile
+chile_tz = ZoneInfo('America/Santiago')
 
 # Obtener productos
 def get_products_from_mongo(mongo: PyMongo):
@@ -58,9 +61,9 @@ def get_categories_from_mongo(mongo: PyMongo):
 # Crear pedido
 def create_checkout(mongo: PyMongo, checkout_data: dict):
     try:
-        checkout_data["trxDate"] = datetime.now()
+        checkout_data["trxDate"] = datetime.now(chile_tz)
         checkout_data["status"] = "pending"
-        checkout_data["lastStatusModificationDate"] = datetime.now()
+        checkout_data["lastStatusModificationDate"] = datetime.now(chile_tz)
         print(f'trxDate {checkout_data.get("trxDate")}')
         print(f'lastStatusModificationDate {checkout_data.get("lastStatusModificationDate")}')
 
@@ -91,7 +94,7 @@ def update_order_status(mongo: PyMongo, update_data: dict):
             return None
     
         found_order["status"] = update_data.get("update_status")
-        found_order["lastStatusModificationDate"] = datetime.now()
+        found_order["lastStatusModificationDate"] = datetime.now(chile_tz)
 
         result = mongo.db.orders.update_one({"_id": ObjectId(order_id)}, {"$set": found_order})
 
