@@ -22,8 +22,8 @@ limiter = Limiter(key_func=get_remote_address, storage_uri=redis_host, strategy=
 mongo = PyMongo()
 
 # Configura la zona horaria de Chile (se ejecuta al inicio del programa)
-os.environ['TZ'] = 'America/Santiago'  # Establece la zona horaria
-time.tzset()  # Aplica el cambio
+os.environ['TZ'] = 'America/Santiago'
+time.tzset()
 
 def create_app():
     app = Flask(__name__)

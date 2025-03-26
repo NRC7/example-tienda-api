@@ -5,7 +5,6 @@ from flask_pymongo import PyMongo
 from bson.objectid import ObjectId
 from handlers.mongo_error_handler import ErrorHandlerMongo
 from datetime import datetime
-from zoneinfo import ZoneInfo
 
 ## CRUD APP ##
 
@@ -61,8 +60,6 @@ def create_checkout(mongo: PyMongo, checkout_data: dict):
         checkout_data["trxDate"] = datetime.now()
         checkout_data["status"] = "pending"
         checkout_data["lastStatusModificationDate"] = datetime.now()
-        print(f'trxDate {checkout_data.get("trxDate")}')
-        print(f'lastStatusModificationDate {checkout_data.get("lastStatusModificationDate")}')
 
         # Validar que todos los campos obligatorios estén presentes
         validate_checkout_data(checkout_data)

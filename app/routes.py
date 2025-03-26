@@ -82,7 +82,7 @@ def register():
         existingUser = get_user_by_email(mongo, email)
         if existingUser: 
             return ErrorHandler.not_acceptable_error("Email already exist r")    
-        print(f'data: {data}')
+        
         user = register_user(mongo, name, email, address, dateOfBirth, hashed_info, role)
 
         return jsonify({"code": "201", "message": f"User registered successfully: {user.get('userName')}"}), 201
@@ -264,8 +264,7 @@ def checkout():
             return ErrorHandler.not_found_error("User not found r")
 
         new_checkout = create_checkout(mongo, checkout_data)
-        print(f'new_trxDate {new_checkout.get("trxDate")}')
-        print(f'new_lastStatusModificationDate {new_checkout.get("lastStatusModificationDate")}')
+
         return jsonify({"code": "201", "message": "Order created successfully", "data": new_checkout}), 201
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error procesing order r: {str(e)}")
