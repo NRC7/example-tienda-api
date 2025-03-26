@@ -6,6 +6,7 @@ from bson.objectid import ObjectId
 from handlers.mongo_error_handler import ErrorHandlerMongo
 from datetime import datetime
 
+
 ## CRUD APP ##
 
 # Obtener productos
@@ -57,6 +58,12 @@ def get_categories_from_mongo(mongo: PyMongo):
 # Crear pedido
 def create_checkout(mongo: PyMongo, checkout_data: dict):
     try:
+        checkout_data["trxDate"] = datetime.now()
+        checkout_data["status"] = "pending"
+        checkout_data["lastStatusModificationDate"] = datetime.now()
+        print(f'trxDate {checkout_data.get("trxDate")}')
+        print(f'lastStatusModificationDate {checkout_data.get("lastStatusModificationDate")}')
+
         # Validar que todos los campos obligatorios estén presentes
         validate_checkout_data(checkout_data)
 
@@ -84,7 +91,7 @@ def update_order_status(mongo: PyMongo, update_data: dict):
             return None
     
         found_order["status"] = update_data.get("update_status")
-        found_order["lastStatusModificationDate"] = datetime.today()
+        found_order["lastStatusModificationDate"] = datetime.now()
 
         result = mongo.db.orders.update_one({"_id": ObjectId(order_id)}, {"$set": found_order})
 

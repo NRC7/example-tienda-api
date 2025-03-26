@@ -263,11 +263,6 @@ def checkout():
         if not get_user_by_id(mongo, get_jwt_identity()):
             return ErrorHandler.not_found_error("User not found r")
 
-        checkout_data["trxDate"] = datetime.today()
-        checkout_data["status"] = "pending"
-        checkout_data["lastStatusModificationDate"] = datetime.today()
-        print(f'trxDate {checkout_data.get("trxDate")}')
-        print(f'lastStatusModificationDate {checkout_data.get("lastStatusModificationDate")}')
         new_checkout = create_checkout(mongo, checkout_data)
         print(f'new_trxDate {new_checkout.get("trxDate")}')
         print(f'new_lastStatusModificationDate {new_checkout.get("lastStatusModificationDate")}')
