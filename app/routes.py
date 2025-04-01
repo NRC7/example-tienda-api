@@ -232,22 +232,22 @@ def update_user_data_route():
         return ErrorHandler.internal_server_error(f"Error during updating user data r: {str(e)}")    
     
 # Endpoint para obtener lista de usuarios
-# @main.route('/users', methods=['GET'])
+@main.route('/users', methods=['GET'])
 # @limiter.limit("2 per minute") 
 # @jwt_required_middleware(role="admin")
 # @jwt_required_middleware(location=['headers'])
-# def get_users_route():
-#     try:
-#         user_list = get_users(mongo)
-#         return jsonify({
-#             "code": "200",
-#             "len": len(user_list),
-#             "message": "Fetch users successfully",
-#             "data": user_list
-#         }), 200
+def get_users_route():
+    try:
+        user_list = get_users(mongo)
+        return jsonify({
+            "code": "200",
+            "len": len(user_list),
+            "message": "Fetch users successfully",
+            "data": user_list
+        }), 200
 
-#     except Exception as e:
-#         return ErrorHandler.internal_server_error(f"Error fetching users r: {str(e)}")
+    except Exception as e:
+        return ErrorHandler.internal_server_error(f"Error fetching users r: {str(e)}")
 
 # Endpoint para procesar el checkout
 @main.route('/api/v1/checkout', methods=['POST'])
