@@ -212,6 +212,8 @@ def get_users(mongo: PyMongo):
             "_id": str(user["_id"]),
             "userName": user.get("userName"),
             "email": user.get("email"),
+            "address": user.get("address"),
+            "dateOfBirth": user.get("dateOfBirth"),
             "role": user.get("role")
         }
         for user in users
