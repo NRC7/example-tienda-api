@@ -240,10 +240,6 @@ def deactivate_product(mongo: PyMongo, product_sku: str):
     except Exception as e:
         return ErrorHandlerMongo.handleDBError(e)
 
-
-
-## CRUD ADMIN ##
-
 # Crear un producto
 def create_product(mongo: PyMongo, product_data: dict):
     try:
@@ -304,9 +300,20 @@ def update_product(mongo: PyMongo, product_sku: str, update_data: dict):
         return ErrorHandlerMongo.handleDBError(e)
 
 # Borrar un usuario
-def delete_user(user_id):
-    user = user_id
-    if not user:
-        return False
-    return True
+def delete_user(mongo: PyMongo, user_id: str):
+    try:
+        if not user_id:
+            return False
+        result = mongo.db.products.delete_one({"_id": user_id})
+        if result.matched_count == 0:
+            return False
+        return True
+    except Exception as e:
+        return ErrorHandlerMongo.handleDBError(e)
 
+# Obtener todos los pedidos de un user    
+def get_orders_by_user_id(mongo: PyMongo, user_id: str):
+    try:
+        return serialize_mongo_document(mongo.db.orders.find_one({"user": user_id}))
+    except Exception as e:
+        return ErrorHandlerMongo.handleDBError(e)
