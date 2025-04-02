@@ -277,7 +277,7 @@ def get_orders_by_user_route():
 # Endpoint para obtener lista de usuarios
 @main.route('/api/v1/users', methods=['GET'])
 # @limiter.limit("2 per minute") 
-@jwt_required_middleware(role="admin")
+# @jwt_required_middleware(role="admin")
 def get_users_route():
     try:
         user_list = get_users(mongo)
@@ -294,7 +294,7 @@ def get_users_route():
 # Endpoint para borrar un usuario
 @main.route('/api/v1/user/delete', methods=['DELETE'])
 # @limiter.limit("2 per minute") 
-@jwt_required_middleware(role="admin")
+# @jwt_required_middleware(role="admin")
 def delete_user_route():
     delete_data = request.get_json()
     if not delete_data:
@@ -313,7 +313,7 @@ def delete_user_route():
 # Endpoint para buscar un usuario    
 @main.route('/api/v1/user/byemail', methods=['GET'])
 # @limiter.limit("2 per minute") 
-@jwt_required_middleware(role="admin")
+# @jwt_required_middleware(role="admin")
 def get_user_by_email_route():
     delete_data = request.get_json()
     if not delete_data.get("email"):
@@ -334,7 +334,7 @@ def get_user_by_email_route():
 # Obtener un producto por su SKU
 @main.route('/api/v1/product/bysku', methods=['GET'])
 # @limiter.limit("2 per minute")
-@jwt_required_middleware(role="admin") 
+# @jwt_required_middleware(role="admin") 
 def get_product_by_sku_route():
     product_data = request.get_json()
     if not product_data.get("sku"):
@@ -351,7 +351,7 @@ def get_product_by_sku_route():
 # Actualizar un producto
 @main.route('/api/v1/product/edit', methods=['PUT'])
 # @limiter.limit("2 per minute") 
-@jwt_required_middleware(role="admin")
+# @jwt_required_middleware(role="admin")
 def update_product_route():
     update_data = request.get_json()
     if not update_data:
@@ -370,7 +370,7 @@ def update_product_route():
 # Desactivar un producto
 @main.route('/api/v1/product/status', methods=['POST'])
 # @limiter.limit("2 per minute") 
-@jwt_required_middleware(role="admin")
+# @jwt_required_middleware(role="admin")
 def deactivate_product_route():
     data = request.get_json()
     if not data:
@@ -389,7 +389,7 @@ def deactivate_product_route():
 # Obtener pedidos por user_id
 @main.route('/api/v1/orders/byeuserid', methods=['GET'])
 # @limiter.limit("2 per minute") 
-@jwt_required_middleware(role="admin")
+# @jwt_required_middleware(role="admin")
 def get_orders_by_user_id_route():
     data = request.get_json()
     if not data.get("user_id"):
@@ -411,7 +411,7 @@ def get_orders_by_user_id_route():
 # Actualizar estado del pedido
 @main.route('/api/v1/order/status/edit', methods=['PUT'])
 # @limiter.limit("2 per 5 minute")  
-@jwt_required_middleware(role="admin")
+# @jwt_required_middleware(role="admin")
 def update_order_status_route():
     update_data = request.get_json()
     if not update_data:
@@ -433,7 +433,7 @@ def update_order_status_route():
 # Crear un nuevo producto
 @main.route('/api/v1/product/add', methods=['POST'])
 # @limiter.limit("2 per minute") 
-@jwt_required_middleware(role="admin")
+# @jwt_required_middleware(role="admin")
 def create_product_route():
     product_data = request.get_json()
     if not product_data:
