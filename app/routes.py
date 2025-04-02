@@ -311,16 +311,14 @@ def delete_user_route():
         return ErrorHandler.internal_server_error(f"Error deliting user r: {str(e)}")
 
 # Endpoint para buscar un usuario    
-@main.route('/api/v1/user/byemail', methods=['GET'])
+@main.route('/api/v1/user/<string:user_email>', methods=['GET'])
 # @limiter.limit("2 per minute") 
 # @jwt_required_middleware(role="admin")
-def get_user_by_email_route():
-    delete_data = request.get_json()
-    if not delete_data.get("email"):
+def get_user_by_email_route(user_email):
+    if not user_email:
         return ErrorHandler.bad_request_error("Error missing user email r")
-    email = delete_data.get("email")
     try:
-        user = get_user_by_email(mongo, email)
+        user = get_user_by_email(mongo, user_email)
         if not user:
             return ErrorHandler.not_found_error("Error user not found r")
         return jsonify({    
