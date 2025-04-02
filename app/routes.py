@@ -275,7 +275,7 @@ def get_orders_by_user_route():
 ## RUTAS ADMIN ##
 
 # Endpoint para obtener lista de usuarios
-@main.route('/users', methods=['GET'])
+@main.route('/api/v1/users', methods=['GET'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(role="admin")
 def get_users_route():
@@ -292,7 +292,7 @@ def get_users_route():
         return ErrorHandler.internal_server_error(f"Error fetching users r: {str(e)}")
 
 # Endpoint para borrar un usuario
-@main.route('/user/delete', methods=['DELETE'])
+@main.route('/api/v1/user/delete', methods=['DELETE'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(role="admin")
 def delete_user_route():
@@ -332,7 +332,7 @@ def get_user_by_email_route():
         return ErrorHandler.internal_server_error(f"Error fetching user r: {str(e)}")
 
 # Obtener un producto por su SKU
-@main.route('/product/bysku', methods=['GET'])
+@main.route('/api/v1/product/bysku', methods=['GET'])
 # @limiter.limit("2 per minute")
 @jwt_required_middleware(role="admin") 
 def get_product_by_sku_route():
@@ -349,7 +349,7 @@ def get_product_by_sku_route():
         return ErrorHandler.internal_server_error(f"Error fetching product r: {str(e)}")
 
 # Actualizar un producto
-@main.route('/product/edit', methods=['PUT'])
+@main.route('/api/v1/product/edit', methods=['PUT'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(role="admin")
 def update_product_route():
@@ -368,7 +368,7 @@ def update_product_route():
         return ErrorHandler.internal_server_error(f"Error modifying product r: {str(e)}")
 
 # Desactivar un producto
-@main.route('/product/status', methods=['POST'])
+@main.route('/api/v1/product/status', methods=['POST'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(role="admin")
 def deactivate_product_route():
@@ -387,7 +387,7 @@ def deactivate_product_route():
         return ErrorHandler.internal_server_error(f"Error modifying product r: {str(e)}")
 
 # Obtener pedidos por user_id
-@main.route('/orders/byeuserid', methods=['GET'])
+@main.route('/api/v1/orders/byeuserid', methods=['GET'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(role="admin")
 def get_orders_by_user_id_route():
@@ -409,7 +409,7 @@ def get_orders_by_user_id_route():
         return ErrorHandler.internal_server_error(f"Error during fetching orders r: {str(e)}")  
 
 # Actualizar estado del pedido
-@main.route('/order/status/edit', methods=['PUT'])
+@main.route('/api/v1/order/status/edit', methods=['PUT'])
 # @limiter.limit("2 per 5 minute")  
 @jwt_required_middleware(role="admin")
 def update_order_status_route():
@@ -431,7 +431,7 @@ def update_order_status_route():
         return ErrorHandler.internal_server_error(f"Error during updating order status r: {str(e)}")  
     
 # Crear un nuevo producto
-@main.route('/product/add', methods=['POST'])
+@main.route('/api/v1/product/add', methods=['POST'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(role="admin")
 def create_product_route():
