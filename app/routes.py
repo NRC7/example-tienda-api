@@ -294,7 +294,7 @@ def get_users_route():
 @main.route('/api/v1/user/admin/edit', methods=['PUT'])
 # @limiter.limit("2 per 5 minute")  
 @jwt_required_middleware(location=['headers'], role="admin")
-def update_user_route():
+def update_user_admin_route():
     try:
         update_data = request.get_json()
         if not update_data:
