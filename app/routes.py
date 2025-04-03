@@ -188,7 +188,7 @@ def refresh():
 # Modificar un usuario
 @main.route('/api/v1/user/edit', methods=['PUT'])
 @limiter.limit("2 per 5 minute")  
-@jwt_required_middleware(location=['headers'])
+@jwt_required_middleware(location=['headers'], role="user")
 def update_user_route():
     try:
         update_data = request.get_json()
@@ -290,6 +290,24 @@ def get_users_route():
 
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error fetching users r: {str(e)}")
+
+@main.route('/api/v1/user/admin/edit', methods=['PUT'])
+# @limiter.limit("2 per 5 minute")  
+@jwt_required_middleware(location=['headers'], role="admin")
+def update_user_route():
+    try:
+        update_data = request.get_json()
+        if not update_data:
+            return ErrorHandler.bad_request_error("Missing fields r")
+        
+        updated_user = update_user(mongo, update_data)
+        
+        if not updated_user:
+            return ErrorHandler.not_found_error("User not found r")
+
+        return jsonify({"code": "201", "message": "User updated successfully", "data": updated_user}), 201
+    except Exception as e:
+        return ErrorHandler.internal_server_error(f"Error during updating user r: {str(e)}")
 
 # Endpoint para borrar un usuario
 @main.route('/api/v1/user/delete', methods=['DELETE'])
