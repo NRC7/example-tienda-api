@@ -152,7 +152,7 @@ def login():
 
 @main.route("/api/v1/logout", methods=["POST"])
 @limiter.limit("3 per 2 minute") 
-@jwt_required_middleware()
+# @jwt_required_middleware()
 def logout():
     try:
         response = make_response(
