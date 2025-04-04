@@ -282,7 +282,7 @@ def get_orders_by_user_route():
 # Endpoint para login admin
 @main.route('/api/v1/login/admin', methods=['POST'])
 @limiter.limit("3 per 2 minute") 
-def login():
+def login_admin():
     return handle_login(role_required="admin")
 
 # Endpoint para obtener lista de usuarios
