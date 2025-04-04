@@ -16,6 +16,61 @@ from datetime import datetime
 
 main = Blueprint('main', __name__)
 
+def handle_login(role_required=None):
+    data = request.get_json()
+    if not data:
+        return ErrorHandler.bad_request_error("Error missing body r")
+    
+    email = data.get('email')
+    info = data.get('info')
+    if not all([email, info]):
+        return ErrorHandler.bad_request_error("Missing required credentials r")
+    
+    try:
+        user = get_user_by_email(mongo, email)
+
+        if role_required and user.role != role_required:
+            return ErrorHandler.unauthorized_error("Requires admin role r")
+
+        if not isinstance(user, dict) or not user: 
+            return ErrorHandler.not_found_error("User does not exist r")
+        
+        if not check_password_hash(user.get('password'), info):
+            return ErrorHandler.invalid_credentials_error("r")
+        
+        user.pop('password', None)
+
+        access_token = create_access_token(identity=str(user.get('_id')), fresh=True)
+        refresh_token = create_refresh_token(identity=str(user.get('_id')))
+
+        response = make_response(
+            jsonify({
+                "code": "200",
+                "message": "Login successful",
+                "access_token": access_token,
+                "data": {
+                    "_id": user.get('_id'),
+                    "email": user.get('email'),
+                    "userName": user.get('userName'),
+                    "address": user.get('address'),
+                    "dateOfBirth": user.get('dateOfBirth')
+                }
+            }),
+            200
+        )
+
+        response.set_cookie(
+            'refresh_token_cookie', 
+            refresh_token, 
+            httponly=True, 
+            secure=os.getenv("COOKIE_SECURE"),  # Si https True
+            samesite='Lax',
+            max_age=86400  # Duración de la cookie (0.5 horas, por ejemplo)
+        )
+
+        return response
+    except Exception as e:
+        return ErrorHandler.internal_server_error(f"Error during authentication r: {str(e)}")
 
 ## RUTAS WEB ##
 
@@ -93,57 +148,7 @@ def register():
 @main.route('/api/v1/login', methods=['POST'])
 @limiter.limit("3 per 2 minute") 
 def login():
-    data = request.get_json()
-    if not data:
-        return ErrorHandler.bad_request_error("Error missing body r")
-    
-    email = data.get('email')
-    info = data.get('info')
-    if not all([email, info]):
-        return ErrorHandler.bad_request_error("Missing required credentials r")
-    
-    try:
-        user = get_user_by_email(mongo, email)
-
-        if not isinstance(user, dict) or not user: 
-            return ErrorHandler.not_found_error("User does not exist r")
-        
-        if not check_password_hash(user.get('password'), info):
-            return ErrorHandler.invalid_credentials_error("r")
-        
-        user.pop('password', None)
-
-        access_token = create_access_token(identity=str(user.get('_id')), fresh=True)
-        refresh_token = create_refresh_token(identity=str(user.get('_id')))
-
-        response = make_response(
-            jsonify({
-                "code": "200",
-                "message": "Login successful",
-                "access_token": access_token,
-                "data": {
-                    "_id": user.get('_id'),
-                    "email": user.get('email'),
-                    "userName": user.get('userName'),
-                    "address": user.get('address'),
-                    "dateOfBirth": user.get('dateOfBirth')
-                }
-            }),
-            200
-        )
-
-        response.set_cookie(
-            'refresh_token_cookie', 
-            refresh_token, 
-            httponly=True, 
-            secure=os.getenv("COOKIE_SECURE"),  # Si https True
-            samesite='Lax',
-            max_age=86400  # Duración de la cookie (0.5 horas, por ejemplo)
-        )
-
-        return response
-    except Exception as e:
-        return ErrorHandler.internal_server_error(f"Error during authentication r: {str(e)}")
+    return handle_login()
 
 @main.route("/api/v1/logout", methods=["POST"])
 @limiter.limit("3 per 2 minute") 
@@ -274,8 +279,14 @@ def get_orders_by_user_route():
 
 ## RUTAS ADMIN ##
 
+# Endpoint para login admin
+@main.route('/api/v1/login/admin', methods=['POST'])
+@limiter.limit("3 per 2 minute") 
+def login():
+    return handle_login(role_required="admin")
+
 # Endpoint para obtener lista de usuarios
-@main.route('/api/v1/users', methods=['GET'])
+@main.route('/api/v1/admin/users', methods=['GET'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="admin")
 def get_users_route():
@@ -291,7 +302,7 @@ def get_users_route():
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error fetching users r: {str(e)}")
 
-@main.route('/api/v1/user/admin/edit', methods=['PUT'])
+@main.route('/api/v1/admin/user/edit', methods=['PUT'])
 # @limiter.limit("2 per 5 minute")  
 @jwt_required_middleware(location=['headers'], role="admin")
 def update_user_admin_route():
@@ -310,7 +321,7 @@ def update_user_admin_route():
         return ErrorHandler.internal_server_error(f"Error during updating user r: {str(e)}")
 
 # Endpoint para borrar un usuario
-@main.route('/api/v1/user/delete', methods=['DELETE'])
+@main.route('/api/v1/admin/user/delete', methods=['DELETE'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="admin")
 def delete_user_route():
@@ -329,7 +340,7 @@ def delete_user_route():
         return ErrorHandler.internal_server_error(f"Error deliting user r: {str(e)}")
 
 # Endpoint para buscar un usuario    
-@main.route('/api/v1/user/<string:user_email>', methods=['GET'])
+@main.route('/api/v1/admin/user/<string:user_email>', methods=['GET'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="admin")
 def get_user_by_email_route(user_email):
@@ -348,14 +359,12 @@ def get_user_by_email_route(user_email):
         return ErrorHandler.internal_server_error(f"Error fetching user r: {str(e)}")
 
 # Obtener un producto por su SKU
-@main.route('/api/v1/product/bysku', methods=['GET'])
+@main.route('/api/v1/admin/product/<string:sku>', methods=['GET'])
 # @limiter.limit("2 per minute")
 @jwt_required_middleware(location=['headers'], role="admin") 
-def get_product_by_sku_route():
-    product_data = request.get_json()
-    if not product_data.get("sku"):
+def get_product_by_sku_route(sku):
+    if not sku:
         return ErrorHandler.bad_request_error("Error missing product sku r")
-    sku = product_data.get("sku")
     try:
         product = get_product_by_sku(mongo, str(sku))
         if not product:
@@ -365,7 +374,7 @@ def get_product_by_sku_route():
         return ErrorHandler.internal_server_error(f"Error fetching product r: {str(e)}")
 
 # Actualizar un producto
-@main.route('/api/v1/product/edit', methods=['PUT'])
+@main.route('/api/v1/admin/product/edit', methods=['PUT'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="admin")
 def update_product_route():
@@ -384,7 +393,7 @@ def update_product_route():
         return ErrorHandler.internal_server_error(f"Error modifying product r: {str(e)}")
 
 # Desactivar un producto
-@main.route('/api/v1/product/status', methods=['POST'])
+@main.route('/api/v1/admin/product/status', methods=['POST'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="admin")
 def deactivate_product_route():
@@ -403,7 +412,7 @@ def deactivate_product_route():
         return ErrorHandler.internal_server_error(f"Error modifying product r: {str(e)}")
 
 # Obtener pedidos por user_id
-@main.route('/api/v1/orders/byeuserid', methods=['GET'])
+@main.route('/api/v1/admin/orders/user', methods=['GET'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="admin")
 def get_orders_by_user_id_route():
@@ -425,7 +434,7 @@ def get_orders_by_user_id_route():
         return ErrorHandler.internal_server_error(f"Error during fetching orders r: {str(e)}")  
 
 # Actualizar estado del pedido
-@main.route('/api/v1/order/status/edit', methods=['PUT'])
+@main.route('/api/v1/admin/order/status/edit', methods=['PUT'])
 # @limiter.limit("2 per 5 minute")  
 @jwt_required_middleware(location=['headers'], role="admin")
 def update_order_status_route():
@@ -447,7 +456,7 @@ def update_order_status_route():
         return ErrorHandler.internal_server_error(f"Error during updating order status r: {str(e)}")  
     
 # Crear un nuevo producto
-@main.route('/api/v1/product/add', methods=['POST'])
+@main.route('/api/v1/admin/product/add', methods=['POST'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="admin")
 def create_product_route():
