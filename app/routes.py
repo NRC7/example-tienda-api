@@ -29,11 +29,11 @@ def handle_login(role_required=None):
     try:
         user = get_user_by_email(mongo, email)
 
-        if role_required and user.role != role_required:
-            return ErrorHandler.unauthorized_error("Requires admin role r")
-
         if not isinstance(user, dict) or not user: 
             return ErrorHandler.not_found_error("User does not exist r")
+        
+        if role_required and user.get('role') != role_required:
+            return ErrorHandler.unauthorized_error("Requires admin role r")
         
         if not check_password_hash(user.get('password'), info):
             return ErrorHandler.invalid_credentials_error("r")
