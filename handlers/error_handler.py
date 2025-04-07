@@ -43,7 +43,7 @@ class ErrorHandler:
         return jsonify({
             "code": "405",
             "message": f"Signature has expired: {message}"
-        }), 404
+        }), 405
     
     @staticmethod
     def not_acceptable_error(message):
