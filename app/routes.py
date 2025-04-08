@@ -412,14 +412,12 @@ def deactivate_product_route():
         return ErrorHandler.internal_server_error(f"Error modifying product r: {str(e)}")
 
 # Obtener pedidos por user_id
-@main.route('/api/v1/admin/orders/user', methods=['GET'])
+@main.route('/api/v1/admin/orders/user/<string:user_id>', methods=['POST'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="admin")
-def get_orders_by_user_id_route():
-    data = request.get_json()
-    if not data.get("user_id"):
+def get_orders_by_user_id_route(user_id):
+    if not user_id:
         return ErrorHandler.bad_request_error("Error missing user id r")
-    user_id = data.get("user_id")
     try:
         orders = get_orders_by_user_id(mongo, user_id)
         if not orders:
