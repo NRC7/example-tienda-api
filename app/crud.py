@@ -84,6 +84,7 @@ def update_order_status(mongo: PyMongo, update_data: dict):
         if not found_order:
             return None
         found_order["status"] = update_data.get("update_status")
+        found_order["deliveryDate"] = update_data.get("delivery_date")
         found_order["lastStatusModificationDate"] = datetime.now()
         result = mongo.db.orders.update_one({"_id": ObjectId(order_id)}, {"$set": found_order})
         if result.modified_count > 0:

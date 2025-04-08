@@ -437,7 +437,7 @@ def get_orders_by_user_id_route(user_id):
 @jwt_required_middleware(location=['headers'], role="admin")
 def update_order_status_route():
     update_data = request.get_json()
-    if not update_data or not all([update_data.get("order_id"), update_data.get("update_status")]):
+    if not update_data or not all([update_data.get("order_id"), update_data.get("delivery_date"), update_data.get("update_status")]):
         return ErrorHandler.bad_request_error("Missing fields r")
     try:
         updated_order = update_order_status(mongo, update_data)
