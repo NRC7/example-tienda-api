@@ -79,24 +79,17 @@ def update_order_status(mongo: PyMongo, update_data: dict):
         validation = validate_update_order_status_data(update_data)
         if validation:
             return validation.get_json()
-        print(f"update_order_status update_data: {update_data}")
         order_id = update_data.get("order_id")
-        
         found_order = mongo.db.orders.find_one({"_id": ObjectId(order_id)})
-    
         if not found_order:
             return None
-    
         found_order["status"] = update_data.get("update_status")
         found_order["lastStatusModificationDate"] = datetime.now()
-        print(f"update_order_status found_order: {found_order}")
         result = mongo.db.orders.update_one({"_id": ObjectId(order_id)}, {"$set": found_order})
-        print(f"update_order_status result: {result}")
         if result.modified_count > 0:
             return serialize_mongo_document(
                 mongo.db.orders.find_one({"_id": ObjectId(order_id)})
             )
-        
     except Exception as e:
         return ErrorHandlerMongo.handleDBError(e)    
 
