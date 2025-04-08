@@ -437,21 +437,12 @@ def get_orders_by_user_id_route(user_id):
 @jwt_required_middleware(location=['headers'], role="admin")
 def update_order_status_route():
     update_data = request.get_json()
-    print(f"update_data: {update_data}")
-    if not update_data:
+    if not update_data or not all([update_data.get("order_id"), update_data.get("update_status")]):
         return ErrorHandler.bad_request_error("Missing fields r")
     try:
         updated_order = update_order_status(mongo, update_data)
-        print(f"updated_order: {updated_order}")
         if not updated_order:
-            print("if not updated_order:")
-            return ErrorHandler.not_found_error("Updated order not found r")
-        elif not hasattr(updated_order, 'code'):
-            print("elif not hasattr(updated_order, code)")
-            code = updated_order["code"]
-            message = updated_order["message"]
-            return ErrorHandler.bad_request_error(f"{code} {message} r")
-        print(f"updated_order final: {updated_order}")
+            return ErrorHandler.not_found_error("Order for update not found r")
         return jsonify({"code": "200", "message": "Order status updated successfully", "data": updated_order}), 200
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error during updating order status r: {str(e)}")  
