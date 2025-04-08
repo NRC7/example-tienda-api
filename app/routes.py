@@ -426,7 +426,7 @@ def get_orders_by_user_id_route(user_id):
             "code": "200",
             "len": len(orders),
             "message": "Fetching orders successfully",
-            "data": orders
+            "data": [orders]
         }), 200
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error during fetching orders r: {str(e)}")  
