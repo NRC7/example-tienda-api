@@ -313,7 +313,28 @@ def delete_user(mongo: PyMongo, user_id: str):
 
 # Obtener todos los pedidos de un user    
 def get_orders_by_user_id(mongo: PyMongo, user_id: str):
-    try:
-        return serialize_mongo_document(mongo.db.orders.find_one({"user": user_id}))
-    except Exception as e:
-        return ErrorHandlerMongo.handleDBError(e)
+    orders = mongo.db.orders.find({"user": user_id})
+    return [
+        {
+            "_id": str(order.get("_id")),
+            "address": order.get("address"),
+            "deliveryDate": str(order.get("deliveryDate")),
+            "email": order.get("email"),
+            "couponFactor": order.get("couponFactor"),
+            "couponAmount": order.get("couponAmount"),
+            "paymentMethod": order.get("paymentMethod"),
+            "cartProducts": [
+                {**product, "_id": str(product["_id"])}
+                for product in order.get("cartProducts", [])
+            ],
+            "subTotalAmount": order.get("subTotalAmount"),
+            "shippingCost": order.get("shippingCost"),
+            "totalAmount": order.get("totalAmount"),
+            "totalWithDiscountAmount": order.get("totalWithDiscountAmount"),
+            "trxDate": str(order.get("trxDate")),
+            "user": order.get("user"),
+            "status": order.get("status"),
+            "lastStatusModificationDate": order.get("lastStatusModificationDate")
+        }
+        for order in orders
+    ]
