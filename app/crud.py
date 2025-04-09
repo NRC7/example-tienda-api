@@ -280,28 +280,22 @@ def get_products_by_subCategory(mongo: PyMongo, product_category: str, product_s
 
 # Actualizar un producto por su SKU
 def update_product(mongo: PyMongo, update_data: dict):
-    # try:
-        # validation = validate_and_filter_update_data(update_data)
-        # if validation:
-        #     return validation
-        # product_sku = update_data.get("sku")
-        # found_product = mongo.db.products.find_one({"sku": ObjectId(product_sku)})
-        # if not found_product:
-        #     return None
-        
+    try:
+        validation = validate_and_filter_update_data(update_data)
+        if validation:
+            return validation.get_json()
         product_id = update_data.get("_id")
         update_data.pop("_id")
         update_data.pop("imageResources")
         update_data.pop("rating")
         update_data.pop("uploadDateTime")
-        print(f"update_data_clean: {update_data}")
         result = mongo.db.products.update_one({"_id": ObjectId(product_id)}, {"$set": update_data})
         if result.modified_count > 0:
             return serialize_mongo_document(
                 mongo.db.products.find_one({"_id": ObjectId(product_id)})
             )
-    # except Exception as e:
-    #     return ErrorHandlerMongo.handleDBError(e)
+    except Exception as e:
+        return ErrorHandlerMongo.handleDBError(e)
 
 # Borrar un usuario
 def delete_user(mongo: PyMongo, user_id: str):

@@ -369,7 +369,6 @@ def get_product_by_sku_route(sku):
         product = get_product_by_sku(mongo, str(sku))
         if not product:
             return ErrorHandler.not_found_error("Error product not found r")
-        print(f"product: {product}")
         return jsonify({"code": "200", "message": "Product found successfully", "data": product}), 200
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error fetching product r: {str(e)}")
@@ -381,18 +380,14 @@ def get_product_by_sku_route(sku):
 def update_product_route():
     request_json = request.get_json()
     update_data = request_json["product"]
-    print(f"update_data: {update_data}")
-    # if not update_data:
-    #     return ErrorHandler.bad_request_error("Error missing body r")
-    # if not update_data.get("sku"):
-    #     return ErrorHandler.bad_request_error("Error missing product sku r")
+    if not update_data:
+        return ErrorHandler.bad_request_error("Error missing body r")
+    if not update_data.get("sku"):
+        return ErrorHandler.bad_request_error("Error missing product sku r")
     try:
         updated_product = update_product(mongo, update_data)
-        # if isinstance(updated_product, Response):
-        #     return updated_product
-        # if not updated_product:
-        #     return ErrorHandler.not_found_error("Error product not found r")
-        print(f"updated_product: {updated_product}")
+        if not updated_product:
+            return ErrorHandler.not_found_error("Error product not found r")
         return jsonify({"code": "200", "message": "Product modified successfully", "data": updated_product}), 200
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error modifying product r: {str(e)}")
