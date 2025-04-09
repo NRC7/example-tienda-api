@@ -81,6 +81,7 @@ def validate_and_filter_update_data(update_data: dict):
     
     # Filtrar solo los campos válidos
     required_fields = [
+        "_id",
         "name",
         "category",
         "subCategory",
@@ -92,11 +93,13 @@ def validate_and_filter_update_data(update_data: dict):
         "description",
         "freeShiping",
         "isActive",
-        "sku"
+        "sku",
+        "uploadDateTime"
     ]
     filtered_data = {key: value for key, value in update_data.items() if key in required_fields}
     
     if not filtered_data:
         return ErrorHandlerServices.missing_requeried_fields_error("s: Not enough data provided to update")
     
+    print(f"filtered_data: {filtered_data}")
     return filtered_data

@@ -381,11 +381,10 @@ def update_product_route():
     update_data = request.get_json()
     if not update_data:
         return ErrorHandler.bad_request_error("Error missing body r")
-    if not update_data.get("product_sku"):
+    if not update_data.get("sku"):
         return ErrorHandler.bad_request_error("Error missing product sku r")
-    product_sku = update_data.get("product_sku")
     try:
-        updated_product = update_product(mongo, product_sku, update_data)
+        updated_product = update_product(mongo, update_data)
         if not updated_product:
             return ErrorHandler.not_found_error("Error product not found r")
         return jsonify({"code": "200", "message": "Product modified successfully", "data": updated_product}), 200

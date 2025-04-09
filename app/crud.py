@@ -279,11 +279,10 @@ def get_products_by_subCategory(mongo: PyMongo, product_category: str, product_s
         return ErrorHandlerMongo.handleDBError(e)    
 
 # Actualizar un producto por su SKU
-def update_product(mongo: PyMongo, product_sku: str, update_data: dict):
+def update_product(mongo: PyMongo, update_data: dict):
     try:
-        # Validar y filtrar los datos antes de la actualización
         filtered_data = validate_and_filter_update_data(update_data)
-        # Realizar la actualización con los datos filtrados
+        product_sku = update_data.get("sku")
         result = mongo.db.products.update_one({"sku": product_sku}, {"$set": filtered_data})
         if result.matched_count == 0:
             return None
