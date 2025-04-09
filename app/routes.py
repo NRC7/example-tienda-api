@@ -1,8 +1,8 @@
 import os
 from flask import Blueprint, Response, request, jsonify, make_response
 from .crud import (
-    get_users, update_user, delete_user, register_user, get_user_by_email, update_order_status,
-    get_products_from_mongo, deactivate_product, update_product, get_product_by_sku, get_categories_from_mongo,
+    get_users, update_user, delete_user, register_user, get_user_by_email, update_order_status,delete_product,
+    get_products_from_mongo, update_product, get_product_by_sku, get_categories_from_mongo,
     create_product, get_products_by_category, get_products_by_subCategory, get_user_by_id, get_orders_by_user_id,
     get_banner_images_from_mongo, create_checkout, get_orders_from_mongo, get_orders_by_user, update_user
 )
@@ -391,25 +391,25 @@ def update_product_route():
         return jsonify({"code": "200", "message": "Product modified successfully", "data": updated_product}), 200
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error modifying product r: {str(e)}")
-
-# Desactivar un producto
-@main.route('/api/v1/admin/product/status', methods=['POST'])
+    
+# Endpoint para borrar un producto
+@main.route('/api/v1/admin/product/delete', methods=['DELETE'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="admin")
-def deactivate_product_route():
-    data = request.get_json()
-    if not data:
+def delete_product_route():
+    delete_data = request.get_json()
+    if not delete_data:
         return ErrorHandler.bad_request_error("Error missing body r")
-    if not data.get("product_sku"):
-        return ErrorHandler.bad_request_error("Error missing product sku r")
-    product_sku = data.get("product_sku")
+    product_id = delete_data.get("product_id")
+    if not product_id:
+        return ErrorHandler.bad_request_error("Error missing product _id r")
     try:
-        deactivated = deactivate_product(mongo, product_sku)
-        if not deactivated:
-            return ErrorHandler.not_found_error("Error product not found r")
-        return jsonify({"code": "200", "message": "Product modified successfully"}), 200
+        if not delete_product(product_id):
+            return ErrorHandler.not_found_error("Error product _id is not valid r")
+        else:
+            return jsonify({"code": "200", "message": "Product deleted successfully", "data": "ok"}), 200
     except Exception as e:
-        return ErrorHandler.internal_server_error(f"Error modifying product r: {str(e)}")
+        return ErrorHandler.internal_server_error(f"Error deliting user r: {str(e)}")
 
 # Obtener pedidos por user_id
 @main.route('/api/v1/admin/orders/user/<string:user_id>', methods=['POST'])

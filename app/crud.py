@@ -302,7 +302,18 @@ def delete_user(mongo: PyMongo, user_id: str):
     try:
         if not user_id:
             return False
-        result = mongo.db.products.delete_one({"_id": user_id})
+        result = mongo.db.users.delete_one({"_id": user_id})
+        if result.matched_count == 0:
+            return False
+        return True
+    except Exception as e:
+        return ErrorHandlerMongo.handleDBError(e)
+    
+def delete_product(mongo: PyMongo, product_id: str):
+    try:
+        if not product_id:
+            return False
+        result = mongo.db.products.delete_one({"_id": product_id})
         if result.matched_count == 0:
             return False
         return True
