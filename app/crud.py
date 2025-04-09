@@ -288,7 +288,10 @@ def update_product(mongo: PyMongo, update_data: dict):
         # found_product = mongo.db.products.find_one({"sku": ObjectId(product_sku)})
         # if not found_product:
         #     return None
-        result = mongo.db.products.update_one({"_id": ObjectId(update_data.get("_id"))}, {"$set": update_data})
+        
+        product_id = update_data.get("_id")
+        update_data.pop("_id")
+        result = mongo.db.products.update_one({"_id": ObjectId(product_id)}, {"$set": update_data})
         # if result.modified_count > 0:
         return serialize_mongo_document(
             mongo.db.products.find_one({"_id": ObjectId(update_data.get("_id"))})
