@@ -404,7 +404,7 @@ def delete_product_route():
     if not product_id:
         return ErrorHandler.bad_request_error("Error missing product _id r")
     try:
-        if not delete_product(product_id):
+        if not delete_product(mongo, product_id):
             return ErrorHandler.not_found_error("Error product _id is not valid r")
         else:
             return jsonify({"code": "200", "message": "Product deleted successfully", "data": "ok"}), 200
