@@ -379,7 +379,7 @@ def get_product_by_sku_route(sku):
 @jwt_required_middleware(location=['headers'], role="admin")
 def update_product_route():
     request_json = request.get_json()
-    update_data = request_json.get("product")
+    update_data = request_json["product"]
     print(f"update_data: {update_data}")
     if not update_data:
         return ErrorHandler.bad_request_error("Error missing body r")
