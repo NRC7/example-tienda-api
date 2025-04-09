@@ -280,21 +280,21 @@ def get_products_by_subCategory(mongo: PyMongo, product_category: str, product_s
 
 # Actualizar un producto por su SKU
 def update_product(mongo: PyMongo, update_data: dict):
-    try:
-        validation = validate_and_filter_update_data(update_data)
-        if validation:
-            return validation.get_json()
-        product_sku = update_data.get("sku")
-        found_product = mongo.db.products.find_one({"sku": ObjectId(product_sku)})
-        if not found_product:
-            return None
-        result = mongo.db.products.update_one({"sku": ObjectId(product_sku)}, {"$set": update_data})
-        if result.modified_count > 0:
-            return serialize_mongo_document(
-                mongo.db.products.find_one({"sku": ObjectId(product_sku)})
-            )
-    except Exception as e:
-        return ErrorHandlerMongo.handleDBError(e)
+    # try:
+        # validation = validate_and_filter_update_data(update_data)
+        # if validation:
+        #     return validation
+        # product_sku = update_data.get("sku")
+        # found_product = mongo.db.products.find_one({"sku": ObjectId(product_sku)})
+        # if not found_product:
+        #     return None
+        result = mongo.db.products.update_one({"sku": ObjectId(update_data.get("sku"))}, {"$set": update_data})
+        # if result.modified_count > 0:
+        return serialize_mongo_document(
+            mongo.db.products.find_one({"sku": ObjectId(update_data.get("sku"))})
+        )
+    # except Exception as e:
+    #     return ErrorHandlerMongo.handleDBError(e)
 
 # Borrar un usuario
 def delete_user(mongo: PyMongo, user_id: str):
