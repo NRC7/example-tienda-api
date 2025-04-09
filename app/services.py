@@ -96,10 +96,8 @@ def validate_and_filter_update_data(update_data: dict):
         "sku",
         "uploadDateTime"
     ]
-    filtered_data = {key: value for key, value in update_data.items() if key in required_fields}
+
+    missing_fields = [field for field in required_fields if field not in update_data]
     
-    if not filtered_data:
-        return ErrorHandlerServices.missing_requeried_fields_error("s: Not enough data provided to update")
-    
-    print(f"filtered_data: {filtered_data}")
-    return filtered_data
+    if missing_fields:
+        return ErrorHandlerServices.missing_requeried_fields_error(f"{'s:, '.join(missing_fields)}")
