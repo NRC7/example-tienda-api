@@ -393,23 +393,16 @@ def update_product_route():
         return ErrorHandler.internal_server_error(f"Error modifying product r: {str(e)}")
     
 # Endpoint para borrar un producto
-@main.route('/api/v1/admin/product/delete', methods=['DELETE'])
+@main.route('/api/v1/admin/product/delete/<string:id>', methods=['DELETE'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="admin")
-def delete_product_route():
+def delete_product_route(id):
 
-    delete_data = request.get_json()
-
-    if not delete_data:
-        return ErrorHandler.bad_request_error("Error missing body r")
-    
-    product_id = delete_data.get("product_id")
-
-    if not product_id:
+    if not id:
         return ErrorHandler.bad_request_error("Error missing product _id r")
     
     try:
-        result = delete_product(mongo, product_id)
+        result = delete_product(mongo, id)
     
         if not result["success"]:
             return ErrorHandler.not_found_error(result.get("error", "Unknown error"))
