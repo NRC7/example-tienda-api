@@ -308,12 +308,13 @@ def delete_user(mongo: PyMongo, user_id: str):
         return True
     except Exception as e:
         return ErrorHandlerMongo.handleDBError(e)
-    
+
+# Borrar un producto
 def delete_product(mongo: PyMongo, product_id: str):
     try:
         if not product_id:
             return False
-        result = mongo.db.products.delete_one({"_id": product_id})
+        result = mongo.db.products.delete_one({"_id": ObjectId(product_id)})
         if result.matched_count == 0:
             return False
         return True
