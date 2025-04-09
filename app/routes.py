@@ -389,6 +389,7 @@ def update_product_route():
         updated_product = update_product(mongo, update_data)
         if not updated_product:
             return ErrorHandler.not_found_error("Error product not found r")
+        print(f"updated_product: {updated_product}")
         return jsonify({"code": "200", "message": "Product modified successfully", "data": updated_product}), 200
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error modifying product r: {str(e)}")
