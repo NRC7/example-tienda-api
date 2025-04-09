@@ -291,6 +291,10 @@ def update_product(mongo: PyMongo, update_data: dict):
         
         product_id = update_data.get("_id")
         update_data.pop("_id")
+        update_data.pop("imageResources")
+        update_data.pop("rating")
+        update_data.pop("uploadDateTime")
+        print(f"update_data_clean: {update_data}")
         result = mongo.db.products.update_one({"_id": ObjectId(product_id)}, {"$set": update_data})
         if result.modified_count > 0:
             return serialize_mongo_document(
