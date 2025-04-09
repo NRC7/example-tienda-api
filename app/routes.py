@@ -369,6 +369,7 @@ def get_product_by_sku_route(sku):
         product = get_product_by_sku(mongo, str(sku))
         if not product:
             return ErrorHandler.not_found_error("Error product not found r")
+        print(f"product: {product}")
         return jsonify({"code": "200", "message": "Product found successfully", "data": product}), 200
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error fetching product r: {str(e)}")
