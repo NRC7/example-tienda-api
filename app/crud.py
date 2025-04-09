@@ -313,13 +313,13 @@ def delete_user(mongo: PyMongo, user_id: str):
 def delete_product(mongo: PyMongo, product_id: str):
     try:
         if not product_id:
-            return False
+            return {"success": False, "error": "Missing ID"}
         result = mongo.db.products.delete_one({"_id": ObjectId(product_id)})
-        if result.matched_count == 0:
-            return False
-        return True
+        if result.deleted_count == 0:
+            return {"success": False, "error": "Product not found"}
+        return {"success": True}
     except Exception as e:
-        return ErrorHandlerMongo.handleDBError(e)
+        return {"success": False, "error": str(e)}
 
 # Obtener todos los pedidos de un user    
 def get_orders_by_user_id(mongo: PyMongo, user_id: str):

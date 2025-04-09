@@ -397,17 +397,29 @@ def update_product_route():
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="admin")
 def delete_product_route():
+
     delete_data = request.get_json()
+
     if not delete_data:
         return ErrorHandler.bad_request_error("Error missing body r")
+    
     product_id = delete_data.get("product_id")
+
     if not product_id:
         return ErrorHandler.bad_request_error("Error missing product _id r")
+    
     try:
-        if not delete_product(mongo, product_id):
-            return ErrorHandler.not_found_error("Error product _id is not valid r")
-        else:
-            return jsonify({"code": "200", "message": "Product deleted successfully", "data": "ok"}), 200
+        result = delete_product(mongo, product_id)
+    
+        if not result["success"]:
+            return ErrorHandler.not_found_error(result.get("error", "Unknown error"))
+        
+        return jsonify({
+            "code": "200",
+            "message": "Product deleted successfully",
+            "data": "ok"
+        }), 200
+    
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error deliting user r: {str(e)}")
 
