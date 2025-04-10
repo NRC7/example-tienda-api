@@ -153,7 +153,7 @@ def get_categories():
 @main.route('/api/v1/register', methods=['POST'])
 @limiter.limit("3 per 2 minute")  
 def register():
-    handle_register()
+    return handle_register()
 
 # Endpoint para login
 @main.route('/api/v1/login', methods=['POST'])
