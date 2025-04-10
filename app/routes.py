@@ -189,29 +189,7 @@ def refresh():
                 })
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error when refresing r: {str(e)}")
-    
-# Modificar un usuario
-@main.route('/api/v1/user/edit', methods=['PUT'])
-@limiter.limit("2 per 5 minute")  
-@jwt_required_middleware(location=['headers'], role="user")
-def update_user_route():
-    try:
-        update_data = request.get_json()
-        if not update_data:
-            return ErrorHandler.bad_request_error("Missing fields r")
-        
-        if get_jwt_identity() != str(update_data.get("_id")):
-            return ErrorHandler.conflict_error("Identities do not match r")
-        
-        updated_user = update_user(mongo, update_data)
-        
-        if not updated_user:
-            return ErrorHandler.not_found_error("User not found r")
-
-        return jsonify({"code": "201", "message": "User updated successfully", "data": updated_user}), 201
-    except Exception as e:
-        return ErrorHandler.internal_server_error(f"Error during updating user r: {str(e)}")
-    
+       
 # Actualizar un data de un user
 @main.route('/api/v1/user/data', methods=['PUT'])
 @limiter.limit("3 per 5 minute")  
