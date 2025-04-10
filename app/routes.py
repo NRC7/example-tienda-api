@@ -72,6 +72,37 @@ def handle_login(role_required=None):
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error during authentication r: {str(e)}")
 
+def handle_register(role_required=None):
+    data = request.get_json()
+    if not data:
+        return ErrorHandler.bad_request_error("Error missing body r")
+    
+    name = data.get('user_name')
+    email = data.get('email')
+    address = data.get('address')
+    dateOfBirth = data.get('dateOfBirth')
+    
+    if not all([name, email, address, dateOfBirth, data.get('info')]):
+        return ErrorHandler.bad_request_error("Missing required fields r")
+
+    existingUser = get_user_by_email(mongo, email)
+    if existingUser: 
+        return ErrorHandler.not_acceptable_error("Email already exist r")
+
+    role = 'user'
+    if role_required and role_required == 'admin':
+        role = 'admin'        
+
+    try:
+        info = data.get('info')
+        hashed_info = generate_password_hash(info)
+        user = register_user(mongo, name, email, address, dateOfBirth, hashed_info, role)
+        return jsonify({"code": "201", "message": f"User registered successfully: {user.get('userName')}"}), 201
+    
+    except Exception as e:
+        return ErrorHandler.internal_server_error(f"error when registering user r: {str(e)}")
+
+
 ## RUTAS WEB ##
 
 # Endpoint para obtener todos los productos
@@ -122,27 +153,7 @@ def get_categories():
 @main.route('/api/v1/register', methods=['POST'])
 @limiter.limit("3 per 2 minute")  
 def register():
-    data = request.get_json()
-    if not data:
-        return ErrorHandler.bad_request_error("Error missing body r")
-    name = data.get('user_name')
-    email = data.get('email')
-    address = data.get('address')
-    dateOfBirth = data.get('dateOfBirth')
-    hashed_info = generate_password_hash(data.get('info')) 
-    role = 'user'
-    if not all([name, email, address, dateOfBirth, hashed_info]):
-        return ErrorHandler.bad_request_error("Missing required fields r")
-    try:
-        existingUser = get_user_by_email(mongo, email)
-        if existingUser: 
-            return ErrorHandler.not_acceptable_error("Email already exist r")    
-        
-        user = register_user(mongo, name, email, address, dateOfBirth, hashed_info, role)
-
-        return jsonify({"code": "201", "message": f"User registered successfully: {user.get('userName')}"}), 201
-    except Exception as e:
-        return ErrorHandler.internal_server_error(f"error when registering user r: {str(e)}")
+    handle_register()
 
 # Endpoint para login
 @main.route('/api/v1/login', methods=['POST'])
@@ -256,6 +267,13 @@ def get_orders_by_user_route():
 
 
 ## RUTAS ADMIN ##
+
+# Endpoint para registrar usuarios
+@main.route('/api/v1/register/admin', methods=['POST'])
+@limiter.limit("3 per 2 minute")
+@jwt_required_middleware(location=['headers'], role="admin")  
+def register_admin():
+    return handle_register(role_required="admin")
 
 # Endpoint para login admin
 @main.route('/api/v1/login/admin', methods=['POST'])
