@@ -303,22 +303,22 @@ def get_users_route():
         return ErrorHandler.internal_server_error(f"Error fetching users r: {str(e)}")
 
 @main.route('/api/v1/admin/user/edit', methods=['PUT'])
-# @limiter.limit("2 per 5 minute")  
+# @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="admin")
-def update_user_admin_route():
+def update_user_route():
+    request_json = request.get_json()
+    update_data = request_json["user"]
+    if not update_data:
+        return ErrorHandler.bad_request_error("Error missing body r")
+    if not update_data.get("_id"):
+        return ErrorHandler.bad_request_error("Error missing user id r")
     try:
-        update_data = request.get_json()
-        if not update_data:
-            return ErrorHandler.bad_request_error("Missing fields r")
-        
         updated_user = update_user(mongo, update_data)
-        
         if not updated_user:
-            return ErrorHandler.not_found_error("User not found r")
-
-        return jsonify({"code": "201", "message": "User updated successfully", "data": updated_user}), 201
+            return ErrorHandler.not_found_error("Error user not found r")
+        return jsonify({"code": "200", "message": "User modified successfully", "data": updated_user}), 200
     except Exception as e:
-        return ErrorHandler.internal_server_error(f"Error during updating user r: {str(e)}")
+        return ErrorHandler.internal_server_error(f"Error modifying user r: {str(e)}")
 
 # Endpoint para borrar un usuario
 @main.route('/api/v1/admin/user/delete', methods=['DELETE'])

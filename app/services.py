@@ -75,7 +75,7 @@ def validate_update_order_status_data(update_order_data: dict):
         return ErrorHandlerServices.missing_requeried_fields_error(f"{'s:, '.join(missing_fields)}")
         
 
-def validate_and_filter_update_data(update_data: dict):
+def validate_and_filter_update_product(update_data: dict):
     if not update_data:
         return ErrorHandlerServices.missing_requeried_fields_error("s: No data provided to update")
     
@@ -95,6 +95,25 @@ def validate_and_filter_update_data(update_data: dict):
         "isActive",
         "sku",
         "uploadDateTime"
+    ]
+
+    missing_fields = [field for field in required_fields if field not in update_data]
+    
+    if missing_fields:
+        return ErrorHandlerServices.missing_requeried_fields_error(f"{'s:, '.join(missing_fields)}")
+    
+def validate_and_filter_update_user(update_data: dict):
+    if not update_data:
+        return ErrorHandlerServices.missing_requeried_fields_error("s: No data provided to update")
+
+    # Filtrar solo los campos válidos
+    required_fields = [
+        "_id",
+        "userName",
+        "email",
+        "address",
+        "dateOfBirth",
+        "role"
     ]
 
     missing_fields = [field for field in required_fields if field not in update_data]

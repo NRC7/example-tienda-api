@@ -1,6 +1,6 @@
 from .services import (serialize_mongo_document, validate_product_data,
-    validate_user_data, validate_update_order_status_data,
-    validate_checkout_data, validate_and_filter_update_data)
+    validate_user_data, validate_update_order_status_data, validate_and_filter_update_user,
+    validate_checkout_data, validate_and_filter_update_product)
 from flask_pymongo import PyMongo
 from bson.objectid import ObjectId
 from handlers.mongo_error_handler import ErrorHandlerMongo
@@ -176,16 +176,15 @@ def register_user(mongo: PyMongo, name: str, email: str, address: str, dateOfBir
 # Actualizar user
 def update_user(mongo: PyMongo, update_data: dict):
     try:
-        data_id = update_data.get("_id")
+        validation = validate_and_filter_update_user(update_data)
+        if validation:
+            return validation.get_json()
+        user_id = update_data.get("_id")
         update_data.pop("_id")
-
-        validate_user_data(update_data)
-
-        result = mongo.db.users.update_one({"_id": ObjectId(data_id)}, {"$set": update_data})
-        # print(result.modified_count)
+        result = mongo.db.users.update_one({"_id": ObjectId(user_id)}, {"$set": update_data})
         if result.modified_count > 0:
             return serialize_mongo_document(
-                mongo.db.users.find_one({"_id": ObjectId(data_id)})
+                mongo.db.users.find_one({"_id": ObjectId(user_id)})
             )
     except Exception as e:
         return ErrorHandlerMongo.handleDBError(e)
@@ -218,19 +217,6 @@ def get_user_by_email(mongo: PyMongo, email: str):
     try:
         #product = mongo.db.products.find_one({"sku": product_sku})
         return serialize_mongo_document(mongo.db.users.find_one({"email": email}))
-    except Exception as e:
-        return ErrorHandlerMongo.handleDBError(e)
-
-# Desactivar un producto
-def deactivate_product(mongo: PyMongo, product_sku: str):
-    try:
-        # Buscar y desactivar el producto por el campo "sku", no "_id"
-        result = mongo.db.products.update_one({"sku": product_sku}, {"$set": {"isActive": "false"}})
-        if result.matched_count == 0:
-            return None
-        return serialize_mongo_document(
-            mongo.db.products.find_one({"sku": product_sku})
-        )
     except Exception as e:
         return ErrorHandlerMongo.handleDBError(e)
 
@@ -281,7 +267,7 @@ def get_products_by_subCategory(mongo: PyMongo, product_category: str, product_s
 # Actualizar un producto por su SKU
 def update_product(mongo: PyMongo, update_data: dict):
     try:
-        validation = validate_and_filter_update_data(update_data)
+        validation = validate_and_filter_update_product(update_data)
         if validation:
             return validation.get_json()
         product_id = update_data.get("_id")
