@@ -292,6 +292,7 @@ def update_user_route():
         return ErrorHandler.bad_request_error("Error missing user id r")
     try:
         updated_user = update_user(mongo, update_data)
+        print(f"updated_user: {updated_user}")
         if not updated_user:
             return ErrorHandler.not_found_error("Error user not found r")
         return jsonify({"code": "200", "message": "User modified successfully", "data": updated_user}), 200

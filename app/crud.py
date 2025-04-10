@@ -181,6 +181,8 @@ def update_user(mongo: PyMongo, update_data: dict):
             return validation.get_json()
         user_id = update_data.get("_id")
         update_data.pop("_id")
+        print(f"user_id: {user_id}")
+        print(f"update_data: {update_data}")
         result = mongo.db.users.update_one({"_id": ObjectId(user_id)}, {"$set": update_data})
         if result.modified_count > 0:
             return serialize_mongo_document(
