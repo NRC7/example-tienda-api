@@ -181,8 +181,6 @@ def update_user(mongo: PyMongo, update_data: dict):
             return validation.get_json()
         user_id = update_data.get("_id")
         update_data.pop("_id")
-        print(f"user_id: {user_id}")
-        print(f"update_data: {update_data}")
         result = mongo.db.users.update_one({"_id": ObjectId(user_id)}, {"$set": update_data})
         if result.modified_count > 0:
             return serialize_mongo_document(
@@ -289,13 +287,13 @@ def update_product(mongo: PyMongo, update_data: dict):
 def delete_user(mongo: PyMongo, user_id: str):
     try:
         if not user_id:
-            return False
-        result = mongo.db.users.delete_one({"_id": user_id})
-        if result.matched_count == 0:
-            return False
-        return True
+            return {"success": False, "error": "Missing ID"}
+        result = mongo.db.users.delete_one({"_id": ObjectId(user_id)})
+        if result.deleted_count == 0:
+            return {"success": False, "error": "User not found"}
+        return {"success": True}
     except Exception as e:
-        return ErrorHandlerMongo.handleDBError(e)
+        return {"success": False, "error": str(e)}
 
 # Borrar un producto
 def delete_product(mongo: PyMongo, product_id: str):

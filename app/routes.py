@@ -292,7 +292,6 @@ def update_user_route():
         return ErrorHandler.bad_request_error("Error missing user id r")
     try:
         updated_user = update_user(mongo, update_data)
-        print(f"updated_user: {updated_user}")
         if not updated_user:
             return ErrorHandler.not_found_error("Error user not found r")
         return jsonify({"code": "200", "message": "User modified successfully", "data": updated_user}), 200
@@ -300,21 +299,21 @@ def update_user_route():
         return ErrorHandler.internal_server_error(f"Error modifying user r: {str(e)}")
 
 # Endpoint para borrar un usuario
-@main.route('/api/v1/admin/user/delete', methods=['DELETE'])
+@main.route('/api/v1/admin/user/delete/<string:id>', methods=['DELETE'])
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="admin")
-def delete_user_route():
-    delete_data = request.get_json()
-    if not delete_data:
-        return ErrorHandler.bad_request_error("Error missing body r")
-    user_id = delete_data.get("user_id")
-    if not user_id:
+def delete_user_route(id):
+    if not id:
         return ErrorHandler.bad_request_error("Error missing user id r")
     try:
-        if not delete_user(user_id):
-            return ErrorHandler.not_found_error("Error user id is not valid r")
-        else:
-            return jsonify({"code": "200", "message": "User deleted successfully"}), 200
+        result = delete_user(mongo, id)
+        if not result["success"]:
+            return ErrorHandler.not_found_error(result.get("error", "user not found"))
+        return jsonify({
+            "code": "200",
+            "message": "User deleted successfully",
+            "data": "ok"
+        }), 200
     except Exception as e:
         return ErrorHandler.internal_server_error(f"Error deliting user r: {str(e)}")
 
@@ -376,24 +375,19 @@ def update_product_route():
 # @limiter.limit("2 per minute") 
 @jwt_required_middleware(location=['headers'], role="admin")
 def delete_product_route(id):
-
     if not id:
         return ErrorHandler.bad_request_error("Error missing product _id r")
-    
     try:
         result = delete_product(mongo, id)
-    
         if not result["success"]:
-            return ErrorHandler.not_found_error(result.get("error", "Unknown error"))
-        
+            return ErrorHandler.not_found_error(result.get("error", "Product not found"))
         return jsonify({
             "code": "200",
             "message": "Product deleted successfully",
             "data": "ok"
         }), 200
-    
     except Exception as e:
-        return ErrorHandler.internal_server_error(f"Error deliting user r: {str(e)}")
+        return ErrorHandler.internal_server_error(f"Error deliting product r: {str(e)}")
 
 # Obtener pedidos por user_id
 @main.route('/api/v1/admin/orders/user/<string:user_id>', methods=['POST'])
